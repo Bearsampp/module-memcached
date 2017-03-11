@@ -20,7 +20,7 @@
     <basename property="bundle.folder" file="${bundle.path}"/>
     <replaceproperty src="bundle.folder" dest="bundle.version" replace="${bundle.name}" with=""/>
     
-    <getbundlesrc name="${bundle.name}" version="${bundle.version}" propSrcDest="bundle.srcdest" propSrcFilename="bundle.srcfilename"/>
+    <getmoduleuntouched name="${bundle.name}" version="${bundle.version}" propSrcDest="bundle.srcdest" propSrcFilename="bundle.srcfilename"/>
     <condition property="bundle.srcfinal" value="${bundle.srcdest}/memcached-x86"><available file="${bundle.srcdest}/memcached-x86" type="dir"/></condition>
     <condition property="bundle.srcfinal" value="${bundle.srcdest}"><available file="${bundle.srcdest}" type="dir"/></condition>
     <assertfile file="${bundle.srcfinal}/memcached.exe"/>
