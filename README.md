@@ -5,7 +5,7 @@ This is a module of [Neard project](https://github.com/neard/neard) involving Me
 
 ## Documentation and downloads
 
-https://neard.io/modules/memcached
+https://bearsampp.com/module/memcached
 
 ## Issues
 
