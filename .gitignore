@@ -20,3 +20,8 @@
 .gradle/
 build/
 .gradle-cache/
+.gradle/build-cache/
+
+# Ant (legacy - no longer used)
+build.xml
+*.ant
