@@ -85,6 +85,9 @@ Built releases are placed in:
 - Archive format: `.7z` (configurable)
 - Hash files: `.md5`, `.sha1`, `.sha256`, `.sha512`
 
+Archive structure:
+- Each archive contains a top-level version folder, matching Bearsampp’s historical packaging (e.g., `memcached1.6.39/` with all files inside).
+
 ## Issues
 
 Issues must be reported on [Bearsampp repository](https://github.com/bearsampp/bearsampp/issues).
