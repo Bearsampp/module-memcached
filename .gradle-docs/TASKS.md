@@ -1,91 +1,125 @@
 # Gradle Tasks Reference
 
-Complete reference for all available Gradle tasks in the Bearsampp Module Memcached build system.
+Complete reference for all Gradle tasks in the Bearsampp Module Memcached build system.
+
+---
 
 ## Table of Contents
 
+- [Task Groups](#task-groups)
 - [Build Tasks](#build-tasks)
 - [Verification Tasks](#verification-tasks)
-- [Help Tasks](#help-tasks)
-- [Documentation Tasks](#documentation-tasks)
+- [Information Tasks](#information-tasks)
 - [Task Dependencies](#task-dependencies)
-- [Custom Properties](#custom-properties)
+- [Task Examples](#task-examples)
+
+---
+
+## Task Groups
+
+Tasks are organized into logical groups:
+
+| Group            | Purpose                                          |
+|------------------|--------------------------------------------------|
+| **build**        | Build and package tasks                          |
+| **verification** | Verification and validation tasks                |
+| **help**         | Help and information tasks                       |
+
+---
 
 ## Build Tasks
 
 ### release
 
-Build a release package for a specific Memcached version.
+Build and package a release for a specific Memcached version.
 
-**Group:** `build`
+**Group**: build
 
-**Syntax:**
-
+**Usage**:
 ```bash
-# Interactive mode (lists available versions)
+# Interactive mode (prompts for version)
 gradle release
 
-# Non-interactive mode (builds specific version)
-gradle release -PbundleVersion=<version>
+# Non-interactive mode (specify version)
+gradle release -PbundleVersion=1.6.29
 ```
 
-**Parameters:**
+**Parameters**:
+- `-PbundleVersion=X.X.X` - Memcached version to build (optional, prompts if not provided)
 
-| Parameter          | Type     | Required | Description                           | Example      |
-|-------------------|----------|----------|---------------------------------------|--------------|
-| `bundleVersion`   | String   | No       | Version to build (e.g., "1.6.39")     | `1.6.39`     |
+**Description**:
+- Validates the specified version exists in `bin/` or `bin/archived/`
+- Copies Memcached files to preparation directory
+- Creates archive in configured format (7z or zip)
+- Generates hash files (MD5, SHA1, SHA256, SHA512)
+- Outputs to `bearsampp-build/bins/memcached/{bundle.release}/`
 
-**Examples:**
+**Output**:
+```
+bearsampp-build/bins/memcached/2025.8.20/
+├── bearsampp-memcached-1.6.29-2025.8.20.7z
+├── bearsampp-memcached-1.6.29-2025.8.20.7z.md5
+├── bearsampp-memcached-1.6.29-2025.8.20.7z.sha1
+├── bearsampp-memcached-1.6.29-2025.8.20.7z.sha256
+└── bearsampp-memcached-1.6.29-2025.8.20.7z.sha512
+```
 
+**Example**:
 ```bash
-# Interactive mode - shows available versions
+# Build version 1.6.29
+gradle release -PbundleVersion=1.6.29
+
+# Interactive mode - prompts for version selection
 gradle release
-
-# Build version 1.6.39
-gradle release -PbundleVersion=1.6.39
-
-# Build version 1.6.38
-gradle release -PbundleVersion=1.6.38
 ```
 
-**Output:**
+---
 
-```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                         Release Build                                      ║
-╚════════════════════════════════════════════════════════════════════════════╝
+### releaseAll
 
-Building release for memcached version 1.6.39...
+Build releases for all available Memcached versions in the `bin/` directory.
 
-Bundle path: E:/Bearsampp-development/module-memcached/bin/memcached1.6.39
+**Group**: build
 
-Preparing bundle...
-Copying bundle files...
-Creating archive: bearsampp-memcached-1.6.39-2025.8.20.7z
-
-╔════════════════════════════════════════════════════════════════════════════╗
-║                      Release Build Completed                               ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-Release package created:
-  C:\Users\troy\Bearsampp-build\release\bearsampp-memcached-1.6.39-2025.8.20.7z
-
-Package size: 0.45 MB
+**Usage**:
+```bash
+gradle releaseAll
 ```
 
-**Process:**
+**Description**:
+- Scans `bin/` and `bin/archived/` directories for all Memcached versions
+- Builds each version sequentially
+- Reports success/failure for each version
+- Provides summary at the end
 
-1. Validates the specified version exists in `bin/` directory
-2. Creates temporary build directory
-3. Copies bundle files to temporary location
-4. Creates 7z archive with proper naming convention
-5. Outputs archive location and size
+**Example**:
+```bash
+gradle releaseAll
+```
 
-**Error Handling:**
+**Output**:
+```
+======================================================================
+Building releases for 3 memcached versions
+======================================================================
 
-- **Version not found:** Lists available versions
-- **Missing 7z:** Provides installation instructions
-- **Permission errors:** Suggests running with elevated privileges
+[1/3] Building memcached 1.6.29...
+[SUCCESS] memcached 1.6.29 completed
+
+[2/3] Building memcached 1.6.39...
+[SUCCESS] memcached 1.6.39 completed
+
+[3/3] Building memcached 1.5.22...
+[SUCCESS] memcached 1.5.22 completed
+
+======================================================================
+Build Summary
+======================================================================
+Total versions: 3
+Successful:     3
+Failed:         0
+======================================================================
+```
 
 ---
 
@@ -93,39 +127,21 @@ Package size: 0.45 MB
 
 Clean build artifacts and temporary files.
 
-**Group:** `build`
+**Group**: build
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle clean
 ```
 
-**Examples:**
+**Description**:
+- Removes Gradle build directory
+- Cleans temporary build artifacts
 
+**Example**:
 ```bash
-# Clean all build artifacts
 gradle clean
-
-# Clean and rebuild
-gradle clean release -PbundleVersion=1.6.39
 ```
-
-**Output:**
-
-```
-Cleaned: E:\Bearsampp-development\module-memcached\build
-Cleaned: C:\Users\troy\Bearsampp-build\tmp
-
-[SUCCESS] Build artifacts cleaned
-```
-
-**Cleaned Directories:**
-
-| Directory                                  | Description                    |
-|-------------------------------------------|--------------------------------|
-| `build/`                                  | Gradle build directory         |
-| `${buildPath}/tmp/`                       | Temporary build files          |
 
 ---
 
@@ -135,231 +151,231 @@ Cleaned: C:\Users\troy\Bearsampp-build\tmp
 
 Verify the build environment and dependencies.
 
-**Group:** `verification`
+**Group**: verification
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle verify
 ```
 
-**Examples:**
+**Description**:
+Checks the following:
+- Java version (8+)
+- Required files (build.properties)
+- Dev directory (optional warning)
+- bin/ directory
+- 7-Zip installation (if format is 7z)
 
+**Example**:
 ```bash
-# Verify build environment
 gradle verify
-
-# Verify with detailed output
-gradle verify --info
 ```
 
-**Output:**
-
+**Output**:
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                    Build Environment Verification                          ║
-╚════════════════════════════════════════════════════════════════════════════╝
+Verifying build environment for module-memcached...
 
 Environment Check Results:
-────────────────────────────────────────────────────────────────────────────
-  ✓ PASS     Java 8+
-  ✓ PASS     build.gradle
-  ✓ PASS     build.properties
-  ✓ PASS     releases.properties
-  ✓ PASS     settings.gradle
-  �� PASS     bin/ directory
-  ✓ PASS     7z command
-────────────────────────────────────────────────────────────────────────────
+------------------------------------------------------------
+  [PASS]     Java 8+
+  [PASS]     build.properties
+  [FAIL]     dev directory
+  [PASS]     bin directory
+  [PASS]     7-Zip
+------------------------------------------------------------
 
 [SUCCESS] All checks passed! Build environment is ready.
 
 You can now run:
-  gradle release -PbundleVersion=1.6.39     - Build specific version
-  gradle listVersions                        - List available versions
+  gradle release -PbundleVersion=1.6.29   - Build release for version
+  gradle listVersions                     - List available versions
 ```
-
-**Checks Performed:**
-
-| Check                  | Description                                    | Requirement      |
-|-----------------------|------------------------------------------------|------------------|
-| Java 8+               | Java version 8 or higher                       | Required         |
-| build.gradle          | Main build script exists                       | Required         |
-| build.properties      | Bundle configuration exists                    | Required         |
-| releases.properties   | Release history exists                         | Required         |
-| settings.gradle       | Gradle settings exists                         | Required         |
-| bin/ directory        | Binary directory exists                        | Required         |
-| 7z command            | 7-Zip command available                        | Required         |
 
 ---
 
 ### validateProperties
 
-Validate build.properties configuration.
+Validate the build.properties configuration file.
 
-**Group:** `verification`
+**Group**: verification
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle validateProperties
 ```
 
-**Examples:**
+**Description**:
+Validates that all required properties are present:
+- `bundle.name`
+- `bundle.release`
+- `bundle.type`
+- `bundle.format`
 
+**Example**:
 ```bash
-# Validate properties
 gradle validateProperties
 ```
 
-**Output:**
-
+**Output**:
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                    Validating build.properties                             ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
+Validating build.properties...
 [SUCCESS] All required properties are present:
-
-Property             Value
-──────────────────────────────────────────────────
-bundle.name          memcached
-bundle.release       2025.8.20
-bundle.type          bins
-bundle.format        7z
-──────────────────────────────────────────────────
+    bundle.name = memcached
+    bundle.release = 2025.8.20
+    bundle.type = bins
+    bundle.format = 7z
 ```
-
-**Validated Properties:**
-
-| Property          | Required | Description                           |
-|------------------|----------|---------------------------------------|
-| `bundle.name`    | Yes      | Bundle name (e.g., "memcached")       |
-| `bundle.release` | Yes      | Release date (e.g., "2025.8.20")      |
-| `bundle.type`    | Yes      | Bundle type (e.g., "bins")            |
-| `bundle.format`  | Yes      | Archive format (e.g., "7z")           |
 
 ---
 
-## Help Tasks
+### checkModulesUntouched
+
+Check integration with the modules-untouched repository.
+
+**Group**: verification
+
+**Usage**:
+```bash
+gradle checkModulesUntouched
+```
+
+**Description**:
+- Fetches memcached.properties from modules-untouched repository
+- Displays available versions
+- Tests repository connectivity
+
+**Example**:
+```bash
+gradle checkModulesUntouched
+```
+
+**Output**:
+```
+======================================================================
+Modules-Untouched Integration Check
+======================================================================
+
+Repository URL:
+  https://raw.githubusercontent.com/Bearsampp/modules-untouched/main/modules/memcached.properties
+
+Fetching memcached.properties from modules-untouched...
+
+======================================================================
+Available Versions in modules-untouched
+======================================================================
+  1.6.29
+  1.6.39
+  1.5.22
+======================================================================
+Total versions: 3
+
+======================================================================
+[SUCCESS] modules-untouched integration is working
+======================================================================
+```
+
+---
+
+## Information Tasks
 
 ### info
 
 Display build configuration information.
 
-**Group:** `help`
+**Group**: help
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle info
 ```
 
-**Examples:**
+**Description**:
+Displays comprehensive build information including:
+- Project details
+- Bundle properties
+- File paths
+- Java and Gradle versions
+- Available task groups
+- Quick start commands
 
+**Example**:
 ```bash
-# Display build information
 gradle info
 ```
 
-**Output:**
-
+**Output**:
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                Bearsampp Module Memcached - Build Info                     ║
-╚════════════════════════════════════════════════════════════════════════════╝
+================================================================
+        Bearsampp Module Memcached - Build Info
+================================================================
 
-Project Information:
-  Name:                 module-memcached
-  Version:              2025.8.20
-  Description:          Bearsampp Module - memcached
-  Group:                com.bearsampp.modules
+Project:        module-memcached
+Version:        2025.8.20
+Description:    Bearsampp Module - memcached
 
 Bundle Properties:
-  Name:                 memcached
-  Release:              2025.8.20
-  Type:                 bins
-  Format:               7z
+  Name:         memcached
+  Release:      2025.8.20
+  Type:         bins
+  Format:       7z
 
 Paths:
-  Project Directory:    E:/Bearsampp-development/module-memcached
-  Root Directory:       E:/Bearsampp-development
-  Build Path:           C:\Users\troy\Bearsampp-build
-  Temp Path:            C:\Users\troy\Bearsampp-build\tmp
-  Release Path:         C:\Users\troy\Bearsampp-build\release
+  Project Dir:  E:/Bearsampp-development/module-memcached
+  Root Dir:     E:/Bearsampp-development
+  Build Base:   E:/Bearsampp-development/bearsampp-build
+  Build Tmp:    E:/Bearsampp-development/bearsampp-build/tmp
+  ...
 
-Environment:
-  Java Version:         17.0.2
-  Java Home:            C:\Program Files\Java\jdk-17.0.2
-  Gradle Version:       8.5
-  Gradle Home:          C:\Users\troy\.gradle\wrapper\dists\gradle-8.5
-  Operating System:     Windows 11 10.0
+Java:
+  Version:      17
+  Home:         C:/Program Files/Java/jdk-17
 
-Available Task Groups:
-  • build               - Build and package tasks
-  • verification        - Verification and validation tasks
-  • help                - Help and information tasks
-  • documentation       - Documentation tasks
+Gradle:
+  Version:      8.5
+  Home:         C:/Gradle/gradle-8.5
 
 Quick Start:
   gradle tasks                              - List all available tasks
   gradle info                               - Show this information
-  gradle release                            - Interactive release build
-  gradle release -PbundleVersion=1.6.39     - Non-interactive release
+  gradle release                            - Build release (interactive mode)
+  gradle release -PbundleVersion=1.6.29     - Build release for version
+  gradle releaseAll                         - Build all available versions
   gradle clean                              - Clean build artifacts
-  gradle verify                             - Verify build environment
-  gradle listVersions                       - List available bundle versions
-  gradle listReleases                       - List all releases
-
-Documentation:
-  See .gradle-docs/ for comprehensive build documentation
 ```
 
 ---
 
 ### listVersions
 
-List all available bundle versions in the bin/ directory.
+List all available Memcached versions in the `bin/` and `bin/archived/` directories.
 
-**Group:** `help`
+**Group**: help
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle listVersions
 ```
 
-**Examples:**
+**Description**:
+- Scans `bin/` directory for Memcached versions
+- Scans `bin/archived/` directory for archived versions
+- Displays versions with location tags
+- Shows total count
 
+**Example**:
 ```bash
-# List available versions
 gradle listVersions
 ```
 
-**Output:**
-
+**Output**:
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                  Available memcached Versions in bin/                      ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-Version         Size            Path
-────────────────────────────────────────────────────────────────────────────
-1.6.15          0.42 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.15
-1.6.17          0.43 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.17
-1.6.18          0.43 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.18
-1.6.21          0.44 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.21
-1.6.24          0.44 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.24
-1.6.29          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.29
-1.6.31          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.31
-1.6.32          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.32
-1.6.33          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.33
-1.6.36          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.36
-1.6.37          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.37
-1.6.38          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.38
-1.6.39          0.45 MB         E:/Bearsampp-development/module-memcached/bin/memcached1.6.39
-─────────────────────────────────────────────────────���──────────────────────
-
-Total versions: 13
+Available memcached versions:
+------------------------------------------------------------
+  1.6.29          [bin]
+  1.6.39          [bin]
+  1.5.22          [bin/archived]
+------------------------------------------------------------
+Total versions: 3
 
 To build a specific version:
   gradle release -PbundleVersion=1.6.39
@@ -369,226 +385,236 @@ To build a specific version:
 
 ### listReleases
 
-List all available releases from releases.properties.
+List all available Memcached releases from the modules-untouched repository.
 
-**Group:** `help`
+**Group**: help
 
-**Syntax:**
-
+**Usage**:
 ```bash
 gradle listReleases
 ```
 
-**Examples:**
+**Description**:
+- Fetches memcached.properties from modules-untouched
+- Displays all available versions with download URLs
+- Shows total count
 
+**Example**:
 ```bash
-# List all releases
 gradle listReleases
 ```
 
-**Output:**
-
+**Output**:
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                      Available Memcached Releases                          ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-Version      Download URL
-────────────────────────────────────────────────────────────────────────────
-1.6.6        https://github.com/Bearsampp/module-memcached/releases/download/2022.07.14/bearsampp-memcached-1.6.6-2022.07.14.7z
-1.6.15       https://github.com/Bearsampp/module-memcached/releases/download/2022.08.04/bearsampp-memcached-1.6.15-2022.08.04.7z
-1.6.17       https://github.com/Bearsampp/module-memcached/releases/download/2022.09.26/bearsampp-memcached-1.6.17-2022.09.24.7z
-1.6.18       https://github.com/Bearsampp/module-memcached/releases/download/2023.3.5/bearsampp-memcached-1.6.18-2023.3.5.7z
-1.6.21       https://github.com/Bearsampp/module-memcached/releases/download/2023.10.1/bearsampp-memcached-1.6.21-2023.10.1.7z
-1.6.24       https://github.com/Bearsampp/module-memcached/releases/download/2024.3.30/bearsampp-memcached-1.6.24-2024.3.30.7z
-1.6.29       https://github.com/Bearsampp/module-memcached/releases/download/2024.7.29/bearsampp-memcached-1.6.29-2024.10.7.7z
-1.6.31       https://github.com/Bearsampp/module-memcached/releases/download/2024.10.7/bearsampp-memcached-1.6.31-2024.10.7.7z
-1.6.32       https://github.com/Bearsampp/module-memcached/releases/download/2024.12.1/bearsampp-memcached-1.6.32-2024.12.1.7z
-1.6.33       https://github.com/Bearsampp/module-memcached/releases/download/2024.12.23/bearsampp-memcached-1.6.33-2024.12.23.7z
-1.6.36       https://github.com/Bearsampp/module-memcached/releases/download/2025.2.11/bearsampp-memcached-1.6.36-2025.2.11.7z
-1.6.38       https://github.com/Bearsampp/module-memcached/releases/download/2025.4.19/bearsampp-memcached-1.6.38-2025.4.19.7z
-1.6.39       https://github.com/Bearsampp/module-memcached/releases/download/2025.8.20/bearsampp-memcached-1.6.39-2025.8.20.7z
-────────────────────────────────────────────────────────────────────────────
-
-Total releases: 13
-```
-
----
-
-### tasks
-
-List all available Gradle tasks.
-
-**Group:** `help`
-
-**Syntax:**
-
-```bash
-gradle tasks
-gradle tasks --all
-```
-
-**Examples:**
-
-```bash
-# List main tasks
-gradle tasks
-
-# List all tasks including internal ones
-gradle tasks --all
-```
-
----
-
-## Documentation Tasks
-
-### generateDocs
-
-Generate build documentation in .gradle-docs/.
-
-**Group:** `documentation`
-
-**Syntax:**
-
-```bash
-gradle generateDocs
-```
-
-**Examples:**
-
-```bash
-# Generate documentation
-gradle generateDocs
-```
-
-**Output:**
-
-```
-Generating documentation in .gradle-docs/...
-[SUCCESS] Documentation directory created
-See .gradle-docs/ for comprehensive build documentation
+Available Memcached Releases (modules-untouched):
+--------------------------------------------------------------------------------
+  1.6.29     -> https://memcached.org/files/memcached-1.6.29-win64.zip
+  1.6.39     -> https://memcached.org/files/memcached-1.6.39-win64.zip
+  1.5.22     -> https://memcached.org/files/memcached-1.5.22-win64.zip
+--------------------------------------------------------------------------------
+Total releases: 3
 ```
 
 ---
 
 ## Task Dependencies
 
-### Dependency Graph
+### Task Execution Order
+
+Tasks have implicit dependencies based on their functionality:
 
 ```
 release
-  (no dependencies)
+  └── (validates environment)
+      └── (validates version exists)
+          └── (copies files)
+              └── (creates archive)
+                  └── (generates hashes)
 
-clean
-  (no dependencies)
+releaseAll
+  └── (scans for versions)
+      └── (calls release logic for each version)
 
 verify
-  (no dependencies)
+  └── (checks Java)
+      └── (checks files)
+          └── (checks directories)
+              └── (checks 7-Zip)
 
 validateProperties
-  (no dependencies)
+  └── (loads build.properties)
+      └── (validates required properties)
 
-info
-  (no dependencies)
-
-listVersions
-  (no dependencies)
-
-listReleases
-  (no dependencies)
-
-generateDocs
-  (no dependencies)
+checkModulesUntouched
+  └── (fetches remote properties)
+      └── (displays versions)
 ```
 
-### Common Task Chains
+---
+
+## Task Examples
+
+### Building a Single Version
+
+```bash
+# Interactive mode - prompts for version
+gradle release
+
+# Non-interactive mode - specify version
+gradle release -PbundleVersion=1.6.29
+```
+
+### Building All Versions
+
+```bash
+# Build all versions in bin/ and bin/archived/
+gradle releaseAll
+```
+
+### Verifying Environment
+
+```bash
+# Check if environment is ready for building
+gradle verify
+
+# Validate build.properties
+gradle validateProperties
+
+# Check modules-untouched integration
+gradle checkModulesUntouched
+```
+
+### Getting Information
+
+```bash
+# Display build information
+gradle info
+
+# List local versions
+gradle listVersions
+
+# List remote versions
+gradle listReleases
+
+# List all available tasks
+gradle tasks
+```
+
+### Cleaning Build Artifacts
+
+```bash
+# Clean build directory
+gradle clean
+```
+
+### Debugging
+
+```bash
+# Run with info logging
+gradle release -PbundleVersion=1.6.29 --info
+
+# Run with debug logging
+gradle release -PbundleVersion=1.6.29 --debug
+
+# Run with stack trace on error
+gradle release -PbundleVersion=1.6.29 --stacktrace
+```
+
+### Combining Tasks
 
 ```bash
 # Clean and build
-gradle clean release -PbundleVersion=1.6.39
+gradle clean release -PbundleVersion=1.6.29
 
 # Verify and build
-gradle verify release -PbundleVersion=1.6.39
+gradle verify release -PbundleVersion=1.6.29
 
-# Validate and build
-gradle validateProperties release -PbundleVersion=1.6.39
-
-# Full verification and build
-gradle clean verify validateProperties release -PbundleVersion=1.6.39
+# List versions and build
+gradle listVersions release
 ```
 
 ---
 
-## Custom Properties
+## Task Options
+
+### Global Gradle Options
+
+| Option              | Description                                  |
+|---------------------|----------------------------------------------|
+| `--info`            | Set log level to INFO                        |
+| `--debug`           | Set log level to DEBUG                       |
+| `--stacktrace`      | Print stack trace on error                   |
+| `--scan`            | Create build scan                            |
+| `--offline`         | Execute build without network access         |
+| `--refresh-dependencies` | Refresh cached dependencies           |
 
 ### Project Properties
 
-Properties that can be passed via command line:
-
-| Property          | Type     | Description                           | Example                                      |
-|------------------|----------|---------------------------------------|----------------------------------------------|
-| `bundleVersion`  | String   | Version to build                      | `-PbundleVersion=1.6.39`                     |
-
-### System Properties
-
-System properties that can be set:
-
-| Property                  | Type      | Description                      | Example                                  |
-|--------------------------|-----------|----------------------------------|------------------------------------------|
-| `org.gradle.daemon`      | Boolean   | Enable Gradle daemon             | `-Dorg.gradle.daemon=true`               |
-| `org.gradle.parallel`    | Boolean   | Enable parallel execution        | `-Dorg.gradle.parallel=true`             |
-| `org.gradle.caching`     | Boolean   | Enable build caching             | `-Dorg.gradle.caching=true`              |
-
-### Environment Variables
-
-Environment variables used by the build:
-
-| Variable          | Description                           | Example                                      |
-|------------------|---------------------------------------|----------------------------------------------|
-| `JAVA_HOME`      | Java installation directory           | `C:\Program Files\Java\jdk-17.0.2`           |
-| `GRADLE_HOME`    | Gradle installation directory         | `C:\Gradle\gradle-8.5`                       |
-| `PATH`           | System path (must include 7z)         | `C:\Program Files\7-Zip;...`                 |
+| Property            | Description                                  | Example                          |
+|---------------------|----------------------------------------------|----------------------------------|
+| `-PbundleVersion`   | Specify Memcached version to build           | `-PbundleVersion=1.6.29`         |
 
 ---
 
-## Task Output Formats
+## Task Output
 
 ### Success Output
 
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                      [Task Name] Completed                                 ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-[SUCCESS] Task completed successfully
+======================================================================
+[SUCCESS] Release build completed successfully for version 1.6.29
+Output directory: E:/Bearsampp-development/bearsampp-build/tmp/bundles_build/bins/memcached/memcached1.6.29
+Archive: E:/Bearsampp-development/bearsampp-build/bins/memcached/2025.8.20/bearsampp-memcached-1.6.29-2025.8.20.7z
+======================================================================
 ```
 
 ### Error Output
 
 ```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                      [Task Name] Failed                                    ║
-╚════════════════════════════════════════════════════════════════════════════╝
+FAILURE: Build failed with an exception.
 
-[ERROR] Error message here
+* What went wrong:
+Execution failed for task ':release'.
+> Bundle version not found in bin/ or bin/archived/
 
-Possible solutions:
-  • Solution 1
-  • Solution 2
-```
-
-### Warning Output
-
-```
-[WARNING] Warning message here
-
-Please review:
-  • Item 1
-  • Item 2
+Available versions:
+  - 1.6.29
+  - 1.6.39
+  - 1.5.22
 ```
 
 ---
 
-**Last Updated:** 2025-08-20  
-**Version:** 2025.8.20  
-**Maintainer:** Bearsampp Team
+## Best Practices
+
+### Task Usage
+
+1. **Always verify first**: Run `gradle verify` before building
+2. **List versions**: Use `gradle listVersions` to see available versions
+3. **Use non-interactive mode in scripts**: Specify `-PbundleVersion` for automation
+4. **Clean when needed**: Run `gradle clean` if you encounter issues
+5. **Check logs**: Use `--info` or `--debug` for troubleshooting
+
+### Performance Tips
+
+1. **Enable Gradle daemon**: Set `org.gradle.daemon=true` in gradle.properties
+2. **Use parallel execution**: Set `org.gradle.parallel=true`
+3. **Enable caching**: Set `org.gradle.caching=true`
+4. **Increase heap size**: Set `org.gradle.jvmargs=-Xmx2g`
+
+---
+
+## Support
+
+For task-related issues:
+
+- **Documentation**: [README.md](README.md)
+- **Configuration**: [CONFIGURATION.md](CONFIGURATION.md)
+- **GitHub Issues**: https://github.com/bearsampp/module-memcached/issues
+- **Bearsampp Issues**: https://github.com/bearsampp/bearsampp/issues
+
+---
+
+**Last Updated**: 2025-08-20  
+**Version**: 2025.8.20  
+**Build System**: Pure Gradle

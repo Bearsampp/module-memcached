@@ -1,6 +1,8 @@
 # Configuration Guide
 
-Complete guide for configuring the Bearsampp Module Memcached build system.
+Complete guide to configuring the Bearsampp Module Memcached build system.
+
+---
 
 ## Table of Contents
 
@@ -9,30 +11,23 @@ Complete guide for configuring the Bearsampp Module Memcached build system.
 - [Gradle Properties](#gradle-properties)
 - [Release Properties](#release-properties)
 - [Environment Variables](#environment-variables)
-- [Advanced Configuration](#advanced-configuration)
+- [Build Paths](#build-paths)
+- [Archive Configuration](#archive-configuration)
+- [Configuration Examples](#configuration-examples)
+- [Best Practices](#best-practices)
+
+---
 
 ## Configuration Files
 
-### Overview
+The build system uses several configuration files:
 
-The build system uses three main configuration files:
-
-| File                    | Purpose                                  | Format       | Required |
-|------------------------|------------------------------------------|--------------|----------|
-| `build.properties`     | Bundle configuration                     | Properties   | Yes      |
-| `gradle.properties`    | Gradle build settings                    | Properties   | Yes      |
-| `releases.properties`  | Release history and URLs                 | Properties   | Yes      |
-| `settings.gradle`      | Gradle project settings                  | Groovy       | Yes      |
-
-### File Locations
-
-```
-module-memcached/
-├── build.properties          # Bundle configuration
-├── gradle.properties         # Gradle settings
-├── releases.properties       # Release history
-└── settings.gradle           # Project settings
-```
+| File                  | Purpose                                  | Required |
+|-----------------------|------------------------------------------|----------|
+| `build.properties`    | Main build configuration                 | Yes      |
+| `gradle.properties`   | Gradle-specific settings                 | No       |
+| `releases.properties` | Release history tracking                 | No       |
+| `settings.gradle`     | Gradle project settings                  | Yes      |
 
 ---
 
@@ -40,162 +35,105 @@ module-memcached/
 
 ### File: build.properties
 
-Main configuration file for bundle settings.
+Main configuration file for the build system.
 
-**Location:** `E:/Bearsampp-development/module-memcached/build.properties`
+**Location**: `build.properties` (project root)
 
-**Format:** Java Properties
+**Format**: Java properties file
 
-### Properties Reference
+**Required Properties**:
+
+| Property          | Description                          | Example Value  | Required |
+|-------------------|--------------------------------------|----------------|----------|
+| `bundle.name`     | Name of the bundle                   | `memcached`    | Yes      |
+| `bundle.release`  | Release version                      | `2025.8.20`    | Yes      |
+| `bundle.type`     | Type of bundle                       | `bins`         | Yes      |
+| `bundle.format`   | Archive format (7z or zip)           | `7z`           | Yes      |
+
+**Optional Properties**:
+
+| Property          | Description                          | Example Value  | Default |
+|-------------------|--------------------------------------|----------------|---------|
+| `build.path`      | Custom build output path             | `C:/Bearsampp-build` | `{parent}/bearsampp-build` |
+
+**Example**:
+
+```properties
+# Bundle configuration
+bundle.name     = memcached
+bundle.release  = 2025.8.20
+bundle.type     = bins
+bundle.format   = 7z
+
+# Optional: Custom build path
+# build.path = C:/Bearsampp-build
+```
+
+### Property Details
 
 #### bundle.name
 
-Bundle name identifier.
+The name of the module bundle.
 
-| Property          | Type     | Required | Default      | Example      |
-|------------------|----------|----------|--------------|--------------|
-| `bundle.name`    | String   | Yes      | `memcached`  | `memcached`  |
-
-**Description:** Identifies the bundle name used in file naming and directory structure.
-
-**Usage:**
-```properties
-bundle.name = memcached
-```
-
-**Impact:**
-- Used in archive naming: `bearsampp-${bundle.name}-${version}-${release}.7z`
-- Used in directory naming: `bin/${bundle.name}${version}/`
-- Used in display output
-
----
+- **Type**: String
+- **Required**: Yes
+- **Default**: None
+- **Example**: `memcached`
+- **Usage**: Used in archive names and directory paths
 
 #### bundle.release
 
-Release date identifier.
+The release version for the build.
 
-| Property          | Type     | Required | Default      | Example      |
-|------------------|----------|----------|--------------|--------------|
-| `bundle.release` | String   | Yes      | -            | `2025.8.20`  |
-
-**Description:** Release date in YYYY.M.D format.
-
-**Usage:**
-```properties
-bundle.release = 2025.8.20
-```
-
-**Format:** `YYYY.M.D` or `YYYY.MM.DD`
-
-**Examples:**
-- `2025.8.20` - August 20, 2025
-- `2025.12.1` - December 1, 2025
-- `2024.3.30` - March 30, 2024
-
-**Impact:**
-- Used in archive naming
-- Used in release URLs
-- Used in version tracking
-
----
+- **Type**: String (date format recommended: YYYY.M.D)
+- **Required**: Yes
+- **Default**: None
+- **Example**: `2025.8.20`
+- **Usage**: Used in archive names and output directories
 
 #### bundle.type
 
-Bundle type classification.
+The type of bundle being built.
 
-| Property          | Type     | Required | Default      | Example      |
-|------------------|----------|----------|--------------|--------------|
-| `bundle.type`    | String   | Yes      | `bins`       | `bins`       |
-
-**Description:** Classifies the bundle type.
-
-**Usage:**
-```properties
-bundle.type = bins
-```
-
-**Valid Values:**
-- `bins` - Binary distribution
-- `apps` - Application distribution
-- `tools` - Tool distribution
-
-**Impact:**
-- Used for categorization
-- May affect build process in future versions
-
----
+- **Type**: String
+- **Required**: Yes
+- **Default**: None
+- **Allowed Values**: `bins`, `tools`
+- **Example**: `bins`
+- **Usage**: Determines output directory structure
 
 #### bundle.format
 
-Archive format for release packages.
+The archive format for the release package.
 
-| Property          | Type     | Required | Default      | Example      |
-|------------------|----------|----------|--------------|--------------|
-| `bundle.format`  | String   | Yes      | `7z`         | `7z`         |
+- **Type**: String
+- **Required**: Yes
+- **Default**: None
+- **Allowed Values**: `7z`, `zip`
+- **Example**: `7z`
+- **Usage**: Determines compression format and tool used
 
-**Description:** Specifies the archive format for release packages.
+**Format Comparison**:
 
-**Usage:**
-```properties
-bundle.format = 7z
-```
+| Format | Compression | Speed  | Tool Required | Recommended |
+|--------|-------------|--------|---------------|-------------|
+| `7z`   | Excellent   | Slower | 7-Zip         | Yes         |
+| `zip`  | Good        | Faster | Built-in      | No          |
 
-**Valid Values:**
-- `7z` - 7-Zip format (recommended)
-- `zip` - ZIP format
+#### build.path
 
-**Impact:**
-- Determines compression tool used
-- Affects archive file extension
-- Impacts compression ratio
+Custom build output path (optional).
 
-**Requirements:**
-- `7z` format requires 7-Zip installed and in PATH
-- `zip` format uses Gradle's built-in zip task
+- **Type**: String (absolute path)
+- **Required**: No
+- **Default**: `{parent}/bearsampp-build`
+- **Example**: `C:/Bearsampp-build`
+- **Usage**: Override default build output location
 
----
-
-#### build.path (Optional)
-
-Custom build output directory.
-
-| Property          | Type     | Required | Default                              | Example                    |
-|------------------|----------|----------|--------------------------------------|----------------------------|
-| `build.path`     | String   | No       | `${user.home}/Bearsampp-build`       | `C:/Bearsampp-build`       |
-
-**Description:** Specifies custom build output directory.
-
-**Usage:**
-```properties
-build.path = C:/Bearsampp-build
-```
-
-**Default Behavior:**
-If not specified, uses `${user.home}/Bearsampp-build`
-
-**Directory Structure:**
-```
-${build.path}/
-├── tmp/                      # Temporary build files
-│   └── memcached1.6.39/      # Prepared bundle
-└── release/                  # Release archives
-    └── bearsampp-memcached-1.6.39-2025.8.20.7z
-```
-
----
-
-### Complete Example
-
-```properties
-# Bundle Configuration
-bundle.name = memcached
-bundle.release = 2025.8.20
-bundle.type = bins
-bundle.format = 7z
-
-# Optional: Custom build path
-#build.path = C:/Bearsampp-build
-```
+**Priority Order**:
+1. `build.properties` value
+2. `BEARSAMPP_BUILD_PATH` environment variable
+3. Default: `{parent}/bearsampp-build`
 
 ---
 
@@ -203,148 +141,56 @@ bundle.format = 7z
 
 ### File: gradle.properties
 
-Gradle build system configuration.
+Gradle-specific configuration settings.
 
-**Location:** `E:/Bearsampp-development/module-memcached/gradle.properties`
+**Location**: `gradle.properties` (project root)
 
-**Format:** Java Properties
+**Format**: Java properties file
 
-### Properties Reference
+**Recommended Settings**:
 
-#### org.gradle.daemon
-
-Enable Gradle daemon for faster builds.
-
-| Property                  | Type      | Required | Default      | Example      |
-|--------------------------|-----------|----------|--------------|--------------|
-| `org.gradle.daemon`      | Boolean   | No       | `true`       | `true`       |
-
-**Description:** Enables Gradle daemon for improved build performance.
-
-**Usage:**
 ```properties
+# Gradle daemon configuration
 org.gradle.daemon=true
-```
-
-**Benefits:**
-- Faster build times
-- Reduced startup overhead
-- Improved incremental builds
-
----
-
-#### org.gradle.parallel
-
-Enable parallel task execution.
-
-| Property                  | Type      | Required | Default      | Example      |
-|--------------------------|-----------|----------|--------------|--------------|
-| `org.gradle.parallel`    | Boolean   | No       | `true`       | `true`       |
-
-**Description:** Enables parallel execution of independent tasks.
-
-**Usage:**
-```properties
 org.gradle.parallel=true
-```
-
-**Benefits:**
-- Faster builds on multi-core systems
-- Better resource utilization
-
----
-
-#### org.gradle.caching
-
-Enable build caching.
-
-| Property                  | Type      | Required | Default      | Example      |
-|--------------------------|-----------|----------|--------------|--------------|
-| `org.gradle.caching`     | Boolean   | No       | `true`       | `true`       |
-
-**Description:** Enables Gradle build cache for faster incremental builds.
-
-**Usage:**
-```properties
-org.gradle.caching=true
-```
-
-**Benefits:**
-- Reuses outputs from previous builds
-- Significantly faster incremental builds
-- Shared cache across projects
-
----
-
-#### org.gradle.configureondemand
-
-Enable configuration on demand.
-
-| Property                          | Type      | Required | Default      | Example      |
-|----------------------------------|-----------|----------|--------------|--------------|
-| `org.gradle.configureondemand`   | Boolean   | No       | `true`       | `true`       |
-
-**Description:** Configures only necessary projects.
-
-**Usage:**
-```properties
-org.gradle.configureondemand=true
-```
-
-**Benefits:**
-- Faster configuration phase
-- Reduced memory usage
-
----
-
-#### org.gradle.jvmargs
-
-JVM arguments for Gradle.
-
-| Property                  | Type      | Required | Default      | Example                    |
-|--------------------------|-----------|----------|--------------|----------------------------|
-| `org.gradle.jvmargs`     | String    | No       | -            | `-Xmx2048m -Xms512m`       |
-
-**Description:** Specifies JVM arguments for Gradle daemon.
-
-**Usage:**
-```properties
-org.gradle.jvmargs=-Xmx2048m -Xms512m -XX:MaxMetaspaceSize=512m
-```
-
-**Common Arguments:**
-- `-Xmx2048m` - Maximum heap size (2GB)
-- `-Xms512m` - Initial heap size (512MB)
-- `-XX:MaxMetaspaceSize=512m` - Maximum metaspace size
-
----
-
-### Complete Example
-
-```properties
-# Gradle Build Configuration
-
-# Enable daemon for faster builds
-org.gradle.daemon=true
-
-# Enable parallel execution
-org.gradle.parallel=true
-
-# Enable build caching
 org.gradle.caching=true
 
-# Enable configuration on demand
-org.gradle.configureondemand=true
-
-# JVM arguments
-org.gradle.jvmargs=-Xmx2048m -Xms512m -XX:MaxMetaspaceSize=512m
+# JVM settings
+org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
 
 # Console output
-org.gradle.console=rich
-
-# Warning mode
+org.gradle.console=auto
 org.gradle.warning.mode=all
 ```
+
+### Property Details
+
+#### Daemon Settings
+
+| Property              | Description                          | Recommended |
+|-----------------------|--------------------------------------|-------------|
+| `org.gradle.daemon`   | Enable Gradle daemon                 | `true`      |
+| `org.gradle.parallel` | Enable parallel execution            | `true`      |
+| `org.gradle.caching`  | Enable build caching                 | `true`      |
+
+#### JVM Settings
+
+| Property                  | Description                      | Recommended |
+|---------------------------|----------------------------------|-------------|
+| `org.gradle.jvmargs`      | JVM arguments for Gradle         | `-Xmx2g -XX:MaxMetaspaceSize=512m` |
+
+**Common JVM Arguments**:
+- `-Xmx2g` - Maximum heap size (2GB)
+- `-Xms512m` - Initial heap size (512MB)
+- `-XX:MaxMetaspaceSize=512m` - Maximum metaspace size
+- `-XX:+HeapDumpOnOutOfMemoryError` - Create heap dump on OOM
+
+#### Console Settings
+
+| Property                  | Description                      | Options |
+|---------------------------|----------------------------------|---------|
+| `org.gradle.console`      | Console output mode              | `auto`, `plain`, `rich`, `verbose` |
+| `org.gradle.warning.mode` | Warning display mode             | `all`, `summary`, `none` |
 
 ---
 
@@ -352,395 +198,354 @@ org.gradle.warning.mode=all
 
 ### File: releases.properties
 
-Historical release information and download URLs.
+Tracks release history and metadata.
 
-**Location:** `E:/Bearsampp-development/module-memcached/releases.properties`
+**Location**: `releases.properties` (project root)
 
-**Format:** Java Properties
+**Format**: Java properties file
 
-### Format
+**Purpose**: Historical tracking of releases
 
-```properties
-<version> = <download_url>
-```
-
-### Properties Reference
-
-Each entry represents a released version:
-
-| Key          | Value                                    | Description                           |
-|-------------|------------------------------------------|---------------------------------------|
-| Version     | Download URL                             | GitHub release download link          |
-
-### Example Entries
+**Example**:
 
 ```properties
-1.6.39 = https://github.com/Bearsampp/module-memcached/releases/download/2025.8.20/bearsampp-memcached-1.6.39-2025.8.20.7z
-1.6.38 = https://github.com/Bearsampp/module-memcached/releases/download/2025.4.19/bearsampp-memcached-1.6.38-2025.4.19.7z
-1.6.36 = https://github.com/Bearsampp/module-memcached/releases/download/2025.2.11/bearsampp-memcached-1.6.36-2025.2.11.7z
-```
-
-### URL Format
-
-```
-https://github.com/Bearsampp/module-memcached/releases/download/{release_date}/bearsampp-memcached-{version}-{release_date}.7z
-```
-
-**Components:**
-- `{release_date}` - Release date from `bundle.release`
-- `{version}` - Memcached version number
-- `.7z` - Archive extension
-
-### Adding New Releases
-
-When creating a new release:
-
-1. Build the release package
-2. Upload to GitHub releases
-3. Add entry to `releases.properties`:
-
-```properties
-1.6.40 = https://github.com/Bearsampp/module-memcached/releases/download/2025.9.15/bearsampp-memcached-1.6.40-2025.9.15.7z
-```
-
-### Sorting
-
-Entries should be sorted by version number (ascending):
-
-```properties
-1.6.15 = ...
-1.6.17 = ...
-1.6.18 = ...
-1.6.39 = ...
+# Release history
+2025.8.20 = Released on 2025-08-20
+2025.7.15 = Released on 2025-07-15
+2025.6.10 = Released on 2025-06-10
 ```
 
 ---
 
 ## Environment Variables
 
-### Required Variables
+The build system supports several environment variables:
 
-#### JAVA_HOME
+### BEARSAMPP_BUILD_PATH
 
-Java installation directory.
+Override the default build output path.
 
-| Variable      | Required | Description                           | Example                                |
-|--------------|----------|---------------------------------------|----------------------------------------|
-| `JAVA_HOME`  | Yes      | Java JDK installation directory       | `C:\Program Files\Java\jdk-17.0.2`     |
+- **Type**: String (absolute path)
+- **Required**: No
+- **Default**: `{parent}/bearsampp-build`
+- **Example**: `C:/Bearsampp-build`
+- **Priority**: 2 (after build.properties, before default)
 
-**Usage:**
+**Usage**:
+
 ```bash
-# Windows
-set JAVA_HOME=C:\Program Files\Java\jdk-17.0.2
+# Windows (PowerShell)
+$env:BEARSAMPP_BUILD_PATH = "C:/Bearsampp-build"
+gradle release -PbundleVersion=1.6.29
 
-# PowerShell
-$env:JAVA_HOME="C:\Program Files\Java\jdk-17.0.2"
+# Windows (CMD)
+set BEARSAMPP_BUILD_PATH=C:/Bearsampp-build
+gradle release -PbundleVersion=1.6.29
+
+# Linux/macOS
+export BEARSAMPP_BUILD_PATH=/opt/bearsampp-build
+gradle release -PbundleVersion=1.6.29
 ```
 
-**Verification:**
+### 7Z_HOME
+
+Specify the 7-Zip installation directory.
+
+- **Type**: String (absolute path)
+- **Required**: No (if 7-Zip is in PATH or standard location)
+- **Example**: `C:/Program Files/7-Zip`
+
+**Usage**:
+
 ```bash
-echo %JAVA_HOME%
-java -version
+# Windows (PowerShell)
+$env:7Z_HOME = "C:/Program Files/7-Zip"
+gradle release -PbundleVersion=1.6.29
+
+# Windows (CMD)
+set 7Z_HOME=C:/Program Files/7-Zip
+gradle release -PbundleVersion=1.6.29
 ```
 
----
+### JAVA_HOME
 
-#### PATH
+Specify the Java installation directory.
 
-System path including required tools.
+- **Type**: String (absolute path)
+- **Required**: Yes (usually set by Java installer)
+- **Example**: `C:/Program Files/Java/jdk-17`
 
-| Variable      | Required | Description                           | Example                                |
-|--------------|----------|---------------------------------------|----------------------------------------|
-| `PATH`       | Yes      | System path with 7-Zip                | `C:\Program Files\7-Zip;...`           |
+**Usage**:
 
-**Required in PATH:**
-- 7-Zip (for 7z format)
-- Java (for Gradle)
-- Gradle (optional, can use wrapper)
-
-**Usage:**
 ```bash
-# Windows
-set PATH=%PATH%;C:\Program Files\7-Zip
-
-# PowerShell
-$env:PATH="$env:PATH;C:\Program Files\7-Zip"
-```
-
-**Verification:**
-```bash
-7z
-gradle --version
-```
-
----
-
-### Optional Variables
-
-#### GRADLE_HOME
-
-Gradle installation directory.
-
-| Variable        | Required | Description                           | Example                                |
-|----------------|----------|---------------------------------------|----------------------------------------|
-| `GRADLE_HOME`  | No       | Gradle installation directory         | `C:\Gradle\gradle-8.5`                 |
-
-**Usage:**
-```bash
-# Windows
-set GRADLE_HOME=C:\Gradle\gradle-8.5
-set PATH=%PATH%;%GRADLE_HOME%\bin
+# Windows (PowerShell)
+$env:JAVA_HOME = "C:/Program Files/Java/jdk-17"
+gradle release -PbundleVersion=1.6.29
 ```
 
 ---
 
-#### GRADLE_USER_HOME
+## Build Paths
 
-Gradle user home directory.
+The build system uses a structured directory layout:
 
-| Variable              | Required | Description                           | Example                                |
-|----------------------|----------|---------------------------------------|----------------------------------------|
-| `GRADLE_USER_HOME`   | No       | Gradle cache and config directory     | `C:\Users\troy\.gradle`                |
+### Default Path Structure
 
-**Default:** `${user.home}/.gradle`
+```
+bearsampp-build/                    # Build base directory
+├── tmp/                            # Temporary build files
+│   ├── bundles_prep/               # Preparation directory
+│   │   └── bins/memcached/         # Prepared bundles
+│   │       └── memcached1.6.29/    # Version-specific prep
+│   └── bundles_build/              # Build staging directory
+│       └── bins/memcached/         # Staged bundles
+│           └── memcached1.6.29/    # Version-specific build
+└── bins/memcached/                 # Final output directory
+    └── 2025.8.20/                  # Release version
+        ├── bearsampp-memcached-1.6.29-2025.8.20.7z
+        ├── bearsampp-memcached-1.6.29-2025.8.20.7z.md5
+        ├── bearsampp-memcached-1.6.29-2025.8.20.7z.sha1
+        ├── bearsampp-memcached-1.6.29-2025.8.20.7z.sha256
+        └── bearsampp-memcached-1.6.29-2025.8.20.7z.sha512
+```
 
-**Usage:**
+### Path Variables
+
+| Variable              | Description                          | Example |
+|-----------------------|--------------------------------------|---------|
+| `buildBasePath`       | Base build directory                 | `E:/Bearsampp-development/bearsampp-build` |
+| `buildTmpPath`        | Temporary files directory            | `{buildBasePath}/tmp` |
+| `bundleTmpPrepPath`   | Bundle preparation directory         | `{buildTmpPath}/bundles_prep/bins/memcached` |
+| `bundleTmpBuildPath`  | Bundle build staging directory       | `{buildTmpPath}/bundles_build/bins/memcached` |
+| `buildBinsPath`       | Final output directory               | `{buildBasePath}/bins/memcached/{bundle.release}` |
+
+### Customizing Build Paths
+
+**Method 1: build.properties**
+
+```properties
+build.path = C:/Custom/Build/Path
+```
+
+**Method 2: Environment Variable**
+
 ```bash
-# Windows
-set GRADLE_USER_HOME=C:\Users\troy\.gradle
+export BEARSAMPP_BUILD_PATH=/opt/custom/build
+```
+
+**Method 3: Default**
+
+Uses `{parent}/bearsampp-build` automatically.
+
+---
+
+## Archive Configuration
+
+### Archive Naming
+
+Archives follow this naming convention:
+
+```
+bearsampp-{bundle.name}-{version}-{bundle.release}.{bundle.format}
+```
+
+**Examples**:
+- `bearsampp-memcached-1.6.29-2025.8.20.7z`
+- `bearsampp-memcached-1.6.39-2025.8.20.zip`
+
+### Archive Structure
+
+Archives contain a top-level version folder:
+
+```
+bearsampp-memcached-1.6.29-2025.8.20.7z
+└── memcached1.6.29/               ← Version folder at root
+    ├── memcached.exe
+    ├── memcached.conf
+    └── ...
+```
+
+### Hash Files
+
+Each archive is accompanied by hash files:
+
+| File Extension | Algorithm | Purpose |
+|----------------|-----------|---------|
+| `.md5`         | MD5       | Quick verification |
+| `.sha1`        | SHA-1     | Legacy compatibility |
+| `.sha256`      | SHA-256   | Recommended verification |
+| `.sha512`      | SHA-512   | Maximum security |
+
+**Hash File Format**:
+
+```
+{hash} {filename}
+```
+
+**Example** (`.sha256`):
+
+```
+a1b2c3d4e5f6... bearsampp-memcached-1.6.29-2025.8.20.7z
 ```
 
 ---
 
-## Advanced Configuration
+## Configuration Examples
 
-### Custom Build Paths
-
-Override default build paths:
+### Example 1: Standard Configuration
 
 ```properties
 # build.properties
-build.path = D:/CustomBuild
+bundle.name     = memcached
+bundle.release  = 2025.8.20
+bundle.type     = bins
+bundle.format   = 7z
 ```
-
-**Directory Structure:**
-```
-D:/CustomBuild/
-├── tmp/
-│   └── memcached1.6.39/
-└── release/
-    └── bearsampp-memcached-1.6.39-2025.8.20.7z
-```
-
----
-
-### Performance Tuning
-
-Optimize Gradle performance:
 
 ```properties
 # gradle.properties
-
-# Increase heap size for large builds
-org.gradle.jvmargs=-Xmx4096m -Xms1024m
-
-# Enable all performance features
 org.gradle.daemon=true
 org.gradle.parallel=true
 org.gradle.caching=true
-org.gradle.configureondemand=true
-
-# File system watching (Gradle 7.0+)
-org.gradle.vfs.watch=true
+org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m
 ```
 
----
+### Example 2: Custom Build Path
 
-### Network Configuration
+```properties
+# build.properties
+bundle.name     = memcached
+bundle.release  = 2025.8.20
+bundle.type     = bins
+bundle.format   = 7z
+build.path      = C:/Bearsampp-build
+```
 
-Configure network settings:
+### Example 3: ZIP Format
+
+```properties
+# build.properties
+bundle.name     = memcached
+bundle.release  = 2025.8.20
+bundle.type     = bins
+bundle.format   = zip
+```
+
+### Example 4: Development Configuration
+
+```properties
+# build.properties
+bundle.name     = memcached
+bundle.release  = 2025.8.20-dev
+bundle.type     = bins
+bundle.format   = zip
+build.path      = C:/Dev/Bearsampp-build
+```
 
 ```properties
 # gradle.properties
-
-# Proxy settings
-systemProp.http.proxyHost=proxy.company.com
-systemProp.http.proxyPort=8080
-systemProp.https.proxyHost=proxy.company.com
-systemProp.https.proxyPort=8080
-
-# Proxy authentication
-systemProp.http.proxyUser=username
-systemProp.http.proxyPassword=password
-```
-
----
-
-### Logging Configuration
-
-Configure logging levels:
-
-```properties
-# gradle.properties
-
-# Console output
-org.gradle.console=rich
-
-# Logging level
-org.gradle.logging.level=lifecycle
-
-# Warning mode
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+org.gradle.console=verbose
 org.gradle.warning.mode=all
 ```
 
-**Console Options:**
-- `auto` - Automatic detection
-- `plain` - Plain text output
-- `rich` - Rich console output (default)
-- `verbose` - Verbose output
-
-**Warning Modes:**
-- `all` - Show all warnings
-- `fail` - Fail on warnings
-- `summary` - Show warning summary
-- `none` - Suppress warnings
-
 ---
 
-### Build Cache Configuration
+## Best Practices
 
-Configure build cache:
+### Configuration Management
 
-```groovy
-// settings.gradle
+1. **Version Control**: Commit `build.properties` and `gradle.properties`
+2. **Documentation**: Document any custom configurations
+3. **Consistency**: Use consistent naming and versioning
+4. **Validation**: Run `gradle validateProperties` after changes
 
-buildCache {
-    local {
-        enabled = true
-        directory = file("${rootDir}/.gradle/build-cache")
-        removeUnusedEntriesAfterDays = 30
-    }
-    
-    remote(HttpBuildCache) {
-        enabled = false
-        url = 'https://cache.example.com/'
-        push = false
-    }
-}
-```
+### Build Properties
 
----
+1. **Release Versioning**: Use date format (YYYY.M.D) for `bundle.release`
+2. **Archive Format**: Prefer `7z` for better compression
+3. **Build Path**: Use absolute paths for `build.path`
+4. **Comments**: Add comments to explain custom settings
 
-### Multi-Project Configuration
+### Gradle Properties
 
-For multi-project builds:
+1. **Enable Daemon**: Always set `org.gradle.daemon=true`
+2. **Parallel Execution**: Enable for faster builds
+3. **Caching**: Enable for incremental builds
+4. **Heap Size**: Adjust based on available memory
 
-```groovy
-// settings.gradle
+### Environment Variables
 
-rootProject.name = 'module-memcached'
+1. **Persistence**: Set in system environment for permanent use
+2. **Documentation**: Document required environment variables
+3. **Validation**: Verify environment variables are set correctly
+4. **Priority**: Understand precedence order
 
-// Include subprojects
-// include 'subproject1'
-// include 'subproject2'
+### Path Configuration
 
-// Enable features
-enableFeaturePreview('STABLE_CONFIGURATION_CACHE')
-enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')
-```
-
----
-
-## Configuration Validation
-
-### Validate Configuration
-
-```bash
-# Validate build.properties
-gradle validateProperties
-
-# Verify environment
-gradle verify
-
-# Display configuration
-gradle info
-```
-
-### Configuration Checklist
-
-- [ ] `build.properties` exists and is valid
-- [ ] `gradle.properties` exists and is configured
-- [ ] `releases.properties` exists and is up-to-date
-- [ ] `settings.gradle` exists
-- [ ] `JAVA_HOME` is set correctly
-- [ ] 7-Zip is in PATH
-- [ ] Gradle is installed or wrapper is present
-- [ ] `bin/` directory contains version folders
+1. **Absolute Paths**: Always use absolute paths
+2. **Forward Slashes**: Use `/` instead of `\` for cross-platform compatibility
+3. **No Trailing Slash**: Don't end paths with `/`
+4. **Validation**: Ensure paths exist and are writable
 
 ---
 
 ## Troubleshooting Configuration
 
-### Common Issues
+### Issue: Invalid Properties
 
-#### Issue: Property not found
+**Symptom**: `build.properties validation failed`
 
-**Error:**
-```
-Property 'bundle.name' not found
-```
+**Solution**:
+1. Run `gradle validateProperties`
+2. Check for missing required properties
+3. Verify property values are valid
+4. Check for typos in property names
 
-**Solution:**
-Check `build.properties` contains all required properties:
-```properties
-bundle.name = memcached
-bundle.release = 2025.8.20
-bundle.type = bins
-bundle.format = 7z
-```
+### Issue: Build Path Not Found
 
----
+**Symptom**: `Build path not found` or permission errors
 
-#### Issue: Invalid property value
+**Solution**:
+1. Verify path exists and is writable
+2. Use absolute paths
+3. Check environment variable is set correctly
+4. Ensure no trailing slashes
 
-**Error:**
-```
-Invalid value for bundle.format: 'rar'
-```
+### Issue: 7-Zip Not Found
 
-**Solution:**
-Use valid values:
-```properties
-bundle.format = 7z  # or 'zip'
-```
+**Symptom**: `7-Zip executable not found!`
 
----
+**Solution**:
+1. Install 7-Zip from https://www.7-zip.org/
+2. Set `7Z_HOME` environment variable
+3. Or change `bundle.format=zip` in build.properties
 
-#### Issue: Path not found
+### Issue: Gradle Daemon Issues
 
-**Error:**
-```
-Build path not found: C:/Invalid/Path
-```
+**Symptom**: Slow builds or memory errors
 
-**Solution:**
-1. Check path exists
-2. Use forward slashes or escaped backslashes
-3. Remove `build.path` to use default
-
-```properties
-# Correct
-build.path = C:/Bearsampp-build
-
-# Also correct
-build.path = C:\\Bearsampp-build
-
-# Use default
-#build.path = C:/Bearsampp-build
-```
+**Solution**:
+1. Stop daemon: `gradle --stop`
+2. Adjust heap size in gradle.properties
+3. Disable daemon temporarily: `gradle --no-daemon`
 
 ---
 
-**Last Updated:** 2025-08-20  
-**Version:** 2025.8.20  
-**Maintainer:** Bearsampp Team
+## Support
+
+For configuration issues:
+
+- **Documentation**: [README.md](README.md)
+- **Tasks Reference**: [TASKS.md](TASKS.md)
+- **GitHub Issues**: https://github.com/bearsampp/module-memcached/issues
+- **Bearsampp Issues**: https://github.com/bearsampp/bearsampp/issues
+
+---
+
+**Last Updated**: 2025-08-20  
+**Version**: 2025.8.20  
+**Build System**: Pure Gradle

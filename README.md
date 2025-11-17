@@ -5,24 +5,9 @@
 
 This is a module of [Bearsampp project](https://github.com/bearsampp/bearsampp) involving Memcached.
 
-## Documentation and downloads
+## Build System
 
-https://bearsampp.com/module/memcached
-
-## Building
-
-This module uses Gradle for building releases. The build system provides modern features including:
-- Native Gradle build (no Ant dependency)
-- Automatic hash file generation (MD5, SHA1, SHA256, SHA512)
-- Integration with modules-untouched repository
-- Support for both bin/ and bin/archived/ directories
-- Batch building of all versions
-
-### Prerequisites
-
-- Java 8 or higher
-- Gradle (wrapper included)
-- 7-Zip (for .7z format archives)
+This project uses **Gradle** as its build system. The legacy Ant build has been fully replaced with a modern, pure Gradle implementation.
 
 ### Quick Start
 
@@ -30,63 +15,55 @@ This module uses Gradle for building releases. The build system provides modern 
 # Display build information
 gradle info
 
+# List all available tasks
+gradle tasks
+
 # Verify build environment
 gradle verify
 
-# List available versions in bin/ directory
-gradle listVersions
-
-# Build release for specific version (non-interactive)
-gradle release -PbundleVersion=1.6.29
-
-# Build release interactively (prompts for version)
+# Build a release (interactive)
 gradle release
 
-# Build all available versions
+# Build a specific version (non-interactive)
+gradle release -PbundleVersion=1.6.29
+
+# Build all versions
 gradle releaseAll
 
 # Clean build artifacts
 gradle clean
 ```
 
+### Prerequisites
+
+| Requirement       | Version       | Purpose                                  |
+|-------------------|---------------|------------------------------------------|
+| **Java**          | 8+            | Required for Gradle execution            |
+| **Gradle**        | 8.0+          | Build automation tool                    |
+| **7-Zip**         | Latest        | Archive creation (.7z format)            |
+
 ### Available Tasks
 
-**Build Tasks:**
-- `gradle release -PbundleVersion=X.X.X` - Build release package for specific version
-- `gradle releaseAll` - Build releases for all available versions
-- `gradle clean` - Clean build artifacts
+| Task                  | Description                                      |
+|-----------------------|--------------------------------------------------|
+| `release`             | Build release package (interactive/non-interactive) |
+| `releaseAll`          | Build releases for all available versions        |
+| `clean`               | Clean build artifacts and temporary files        |
+| `verify`              | Verify build environment and dependencies        |
+| `info`                | Display build configuration information          |
+| `listVersions`        | List available bundle versions in bin/           |
+| `listReleases`        | List available releases from modules-untouched   |
+| `validateProperties`  | Validate build.properties configuration          |
+| `checkModulesUntouched` | Check modules-untouched integration            |
 
-**Help Tasks:**
-- `gradle info` - Display build configuration information
-- `gradle tasks` - List all available tasks
-- `gradle listVersions` - List available versions in bin/ and bin/archived/
-- `gradle listReleases` - List available releases from modules-untouched
+For complete documentation, see [.gradle-docs/README.md](.gradle-docs/README.md)
 
-**Verification Tasks:**
-- `gradle verify` - Verify build environment and dependencies
-- `gradle validateProperties` - Validate build.properties configuration
-- `gradle checkModulesUntouched` - Check modules-untouched integration
+## Documentation
 
-### Build Configuration
-
-Build settings are configured in `build.properties`:
-
-```properties
-bundle.name = memcached
-bundle.release = 2025.8.20
-bundle.type = bins
-bundle.format = 7z
-```
-
-### Output
-
-Built releases are placed in:
-- Build directory: `C:/Bearsampp-build/memcachedX.X.X/`
-- Archive format: `.7z` (configurable)
-- Hash files: `.md5`, `.sha1`, `.sha256`, `.sha512`
-
-Archive structure:
-- Each archive contains a top-level version folder, matching Bearsampp’s historical packaging (e.g., `memcached1.6.39/` with all files inside).
+- **Build Documentation**: [.gradle-docs/README.md](.gradle-docs/README.md)
+- **Task Reference**: [.gradle-docs/TASKS.md](.gradle-docs/TASKS.md)
+- **Configuration Guide**: [.gradle-docs/CONFIGURATION.md](.gradle-docs/CONFIGURATION.md)
+- **Module Downloads**: https://bearsampp.com/module/memcached
 
 ## Issues
 

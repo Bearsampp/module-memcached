@@ -1,110 +1,134 @@
-# Bearsampp Module Memcached - Documentation Index
+# Documentation Index
 
-Complete documentation for the Bearsampp Module Memcached build system.
+Complete index of all Gradle build documentation for Bearsampp Module Memcached.
+
+---
+
+## Quick Links
+
+| Document              | Description                                      | Link                          |
+|-----------------------|--------------------------------------------------|-------------------------------|
+| **Main Documentation**| Complete build system guide                      | [README.md](README.md)        |
+| **Task Reference**    | All available Gradle tasks                       | [TASKS.md](TASKS.md)          |
+| **Configuration**     | Configuration files and properties               | [CONFIGURATION.md](CONFIGURATION.md) |
+| **Migration Guide**   | Ant to Gradle migration guide                    | [MIGRATION.md](MIGRATION.md)  |
+
+---
 
 ## Documentation Structure
 
 ```
 .gradle-docs/
-├── INDEX.md                  # This file - Documentation index
-├── README.md                 # Main documentation and quick start
-├── TASKS.md                  # Complete task reference
-├── CONFIGURATION.md          # Configuration guide
-├── RELEASE-PROCESS.md        # Release process guide
-└── MIGRATION-GUIDE.md        # Migration guide from Ant to Gradle
+├── INDEX.md              # This file - Documentation index
+├── README.md             # Main documentation and quick start
+├── TASKS.md              # Complete task reference
+├── CONFIGURATION.md      # Configuration guide
+└── MIGRATION.md          # Ant to Gradle migration guide
 ```
 
-## Quick Navigation
+---
 
-### Getting Started
+## Getting Started
 
-| Document                                          | Description                                    | Audience                |
-|--------------------------------------------------|------------------------------------------------|-------------------------|
-| [README.md](README.md)                           | Main documentation and quick start             | All users               |
+### New Users
 
-### Reference Documentation
+1. **Start Here**: [README.md](README.md) - Overview and quick start
+2. **Verify Setup**: Run `gradle verify` to check environment
+3. **List Tasks**: Run `gradle tasks` to see available tasks
+4. **Build Release**: Run `gradle release -PbundleVersion=1.6.29`
 
-| Document                                          | Description                                    | Audience                |
-|--------------------------------------------------|------------------------------------------------|-------------------------|
-| [TASKS.md](TASKS.md)                             | Complete task reference                        | Developers              |
-| [CONFIGURATION.md](CONFIGURATION.md)             | Configuration guide                            | Developers, DevOps      |
-| [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Release process guide                          | Maintainers             |
-| [MIGRATION-GUIDE.md](MIGRATION-GUIDE.md)         | Migration guide from Ant to Gradle             | All users               |
+### Migrating from Ant
+
+1. **Migration Guide**: [MIGRATION.md](MIGRATION.md) - Complete migration guide
+2. **Command Mapping**: See command equivalents in migration guide
+3. **File Changes**: Understand what changed from Ant to Gradle
+4. **Troubleshooting**: Common migration issues and solutions
+
+### Advanced Users
+
+1. **Task Reference**: [TASKS.md](TASKS.md) - All tasks with examples
+2. **Configuration**: [CONFIGURATION.md](CONFIGURATION.md) - Advanced configuration
+3. **Custom Tasks**: Create custom tasks using Gradle DSL
+
+---
 
 ## Documentation by Topic
 
 ### Build System
 
-| Topic                          | Document                                          | Section                           |
-|-------------------------------|--------------------------------------------------|-----------------------------------|
-| Overview                      | [README.md](README.md)                           | Build System                      |
-| Architecture                  | [README.md](README.md)                           | Build System > Architecture       |
-| Build Flow                    | [README.md](README.md)                           | Build System > Build Flow         |
+| Topic                 | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Overview              | README.md             | Overview                         |
+| Quick Start           | README.md             | Quick Start                      |
+| Installation          | README.md             | Installation                     |
+| Architecture          | README.md             | Architecture                     |
 
 ### Tasks
 
-| Topic                          | Document                                          | Section                           |
-|-------------------------------|--------------------------------------------------|-----------------------------------|
-| All Tasks                     | [TASKS.md](TASKS.md)                             | -                                 |
-| Build Tasks                   | [TASKS.md](TASKS.md)                             | Build Tasks                       |
-| Verification Tasks            | [TASKS.md](TASKS.md)                             | Verification Tasks                |
-| Help Tasks                    | [TASKS.md](TASKS.md)                             | Help Tasks                        |
-| Documentation Tasks           | [TASKS.md](TASKS.md)                             | Documentation Tasks               |
-| Task Dependencies             | [TASKS.md](TASKS.md)                             | Task Dependencies                 |
+| Topic                 | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Build Tasks           | TASKS.md              | Build Tasks                      |
+| Verification Tasks    | TASKS.md              | Verification Tasks               |
+| Information Tasks     | TASKS.md              | Information Tasks                |
+| Task Examples         | TASKS.md              | Task Examples                    |
 
 ### Configuration
 
-| Topic                          | Document                                          | Section                           |
-|-------------------------------|--------------------------------------------------|-----------------------------------|
-| Configuration Files           | [CONFIGURATION.md](CONFIGURATION.md)             | Configuration Files               |
-| Build Properties              | [CONFIGURATION.md](CONFIGURATION.md)             | Build Properties                  |
-| Gradle Properties             | [CONFIGURATION.md](CONFIGURATION.md)             | Gradle Properties                 |
-| Release Properties            | [CONFIGURATION.md](CONFIGURATION.md)             | Release Properties                |
-| Environment Variables         | [CONFIGURATION.md](CONFIGURATION.md)             | Environment Variables             |
-| Advanced Configuration        | [CONFIGURATION.md](CONFIGURATION.md)             | Advanced Configuration            |
+| Topic                 | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Build Properties      | CONFIGURATION.md      | Build Properties                 |
+| Gradle Properties     | CONFIGURATION.md      | Gradle Properties                |
+| Release Properties    | CONFIGURATION.md      | Release Properties               |
+| Environment Variables | CONFIGURATION.md      | Environment Variables            |
 
-### Release Process
+### Migration
 
-| Topic                          | Document                                          | Section                           |
-|-------------------------------|--------------------------------------------------|-----------------------------------|
-| Overview                      | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Overview                          |
-| Prerequisites                 | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Prerequisites                     |
-| Release Workflow              | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Release Workflow                  |
-| Step-by-Step Guide            | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Step-by-Step Guide                |
-| Version Management            | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Version Management                |
-| Publishing Releases           | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Publishing Releases               |
-| Post-Release Tasks            | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Post-Release Tasks                |
+| Topic                 | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Overview              | MIGRATION.md          | Overview                         |
+| What Changed          | MIGRATION.md          | What Changed                     |
+| Command Mapping       | MIGRATION.md          | Command Mapping                  |
+| File Changes          | MIGRATION.md          | File Changes                     |
+| Troubleshooting       | MIGRATION.md          | Troubleshooting                  |
 
-### Troubleshooting
-
-| Topic                          | Document                                          | Section                           |
-|-------------------------------|--------------------------------------------------|-----------------------------------|
-| Common Issues                 | [README.md](README.md)                           | Troubleshooting                   |
-| Configuration Issues          | [CONFIGURATION.md](CONFIGURATION.md)             | Troubleshooting Configuration     |
-| Release Issues                | [RELEASE-PROCESS.md](RELEASE-PROCESS.md)         | Troubleshooting                   |
+---
 
 ## Common Tasks
 
-### For New Users
+### Building
 
-1. Read [README.md](README.md) - Overview and quick start
-2. Run `gradle info` - Display build information
-3. Run `gradle verify` - Verify build environment
-4. Run `gradle listVersions` - List available versions
+| Task                                      | Document      | Reference                        |
+|-------------------------------------------|---------------|----------------------------------|
+| Build a release                           | README.md     | Quick Start                      |
+| Build specific version                    | TASKS.md      | release task                     |
+| Build all versions                        | TASKS.md      | releaseAll task                  |
+| Clean build artifacts                     | TASKS.md      | clean task                       |
 
-### For Developers
+### Configuration
 
-1. Read [TASKS.md](TASKS.md) - Learn available tasks
-2. Read [CONFIGURATION.md](CONFIGURATION.md) - Understand configuration
-3. Run `gradle tasks` - List all tasks
-4. Run `gradle release -PbundleVersion=1.6.39` - Build a release
+| Task                                      | Document      | Reference                        |
+|-------------------------------------------|---------------|----------------------------------|
+| Configure build properties                | CONFIGURATION.md | Build Properties              |
+| Configure build paths                     | CONFIGURATION.md | Build Paths                   |
+| Configure archive format                  | CONFIGURATION.md | Archive Configuration         |
 
-### For Maintainers
+### Verification
 
-1. Read [RELEASE-PROCESS.md](RELEASE-PROCESS.md) - Learn release process
-2. Follow step-by-step guide for releases
-3. Update documentation as needed
-4. Monitor issues and feedback
+| Task                                      | Document      | Reference                        |
+|-------------------------------------------|---------------|----------------------------------|
+| Verify build environment                  | TASKS.md      | verify task                      |
+| Validate properties                       | TASKS.md      | validateProperties task          |
+| Check modules-untouched                   | TASKS.md      | checkModulesUntouched task       |
+
+### Information
+
+| Task                                      | Document      | Reference                        |
+|-------------------------------------------|---------------|----------------------------------|
+| Display build info                        | TASKS.md      | info task                        |
+| List available versions                   | TASKS.md      | listVersions task                |
+| List releases                             | TASKS.md      | listReleases task                |
+
+---
 
 ## Quick Reference
 
@@ -114,17 +138,20 @@ Complete documentation for the Bearsampp Module Memcached build system.
 # Display build information
 gradle info
 
-# List available versions
-gradle listVersions
+# List all available tasks
+gradle tasks
 
-# List all releases
-gradle listReleases
-
-# Verify environment
+# Verify build environment
 gradle verify
 
-# Build release
-gradle release -PbundleVersion=1.6.39
+# Build a release (interactive)
+gradle release
+
+# Build a specific version (non-interactive)
+gradle release -PbundleVersion=1.6.29
+
+# Build all versions
+gradle releaseAll
 
 # Clean build artifacts
 gradle clean
@@ -132,182 +159,182 @@ gradle clean
 
 ### Essential Files
 
-| File                    | Purpose                                  | Documentation                                 |
-|------------------------|------------------------------------------|-----------------------------------------------|
-| `build.gradle`         | Main build script                        | [README.md](README.md)                        |
-| `build.properties`     | Bundle configuration                     | [CONFIGURATION.md](CONFIGURATION.md)          |
-| `gradle.properties`    | Gradle settings                          | [CONFIGURATION.md](CONFIGURATION.md)          |
-| `releases.properties`  | Release history                          | [CONFIGURATION.md](CONFIGURATION.md)          |
-| `settings.gradle`      | Project settings                         | [README.md](README.md)                        |
+| File                  | Purpose                                  |
+|-----------------------|------------------------------------------|
+| `build.gradle`        | Main Gradle build script                 |
+| `settings.gradle`     | Gradle project settings                  |
+| `build.properties`    | Build configuration                      |
+| `gradle.properties`   | Gradle-specific settings                 |
+| `releases.properties` | Release history                          |
 
 ### Essential Directories
 
-| Directory              | Purpose                                  | Documentation                                 |
-|-----------------------|------------------------------------------|-----------------------------------------------|
-| `bin/`                | Memcached version binaries               | [README.md](README.md)                        |
-| `.gradle-docs/`       | Build documentation                      | This file                                     |
-| `build/`              | Gradle build output                      | [README.md](README.md)                        |
+| Directory             | Purpose                                  |
+|-----------------------|------------------------------------------|
+| `bin/`                | Memcached version bundles                |
+| `bin/archived/`       | Archived Memcached versions              |
+| `bearsampp-build/tmp/` | Temporary build files (external)       |
+| `bearsampp-build/bins/` | Final packaged archives (external)    |
+| `.gradle-docs/`       | Gradle documentation                     |
 
-## Documentation Standards
-
-### Format
-
-All documentation uses Markdown format with:
-
-- Clear headings and structure
-- Tables for reference information
-- Code blocks for examples
-- Consistent formatting
-
-### Tables
-
-Tables are aligned with consistent column widths:
-
-```markdown
-| Column 1             | Column 2             | Column 3             |
-|---------------------|---------------------|---------------------|
-| Value 1             | Value 2             | Value 3             |
-```
-
-### Code Blocks
-
-Code blocks specify the language:
-
-```markdown
-```bash
-gradle info
-```
-```
-
-### Links
-
-Internal links use relative paths:
-
-```markdown
-[README.md](README.md)
-```
-
-External links use full URLs:
-
-```markdown
-[Bearsampp](https://bearsampp.com)
-```
-
-## Maintenance
-
-### Updating Documentation
-
-When updating documentation:
-
-1. Update relevant document(s)
-2. Update this index if structure changes
-3. Update version and date at bottom
-4. Test all links
-5. Verify formatting
-
-### Version Information
-
-All documentation includes version information:
-
-```markdown
 ---
 
-**Last Updated:** YYYY-MM-DD  
-**Version:** YYYY.M.D  
-**Maintainer:** Bearsampp Team
-```
+## Search by Keyword
 
-### Review Schedule
+### A-C
 
-Documentation should be reviewed:
+| Keyword               | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Archive               | CONFIGURATION.md      | Archive Configuration            |
+| Architecture          | README.md             | Architecture                     |
+| Build                 | TASKS.md              | Build Tasks                      |
+| Clean                 | TASKS.md              | clean task                       |
+| Configuration         | CONFIGURATION.md      | All sections                     |
 
-- After each release
-- When build system changes
-- When new features are added
-- Quarterly for accuracy
+### D-M
 
-## Contributing to Documentation
+| Keyword               | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Dependencies          | README.md             | Installation                     |
+| Gradle                | README.md             | All sections                     |
+| Hash Files            | README.md             | Architecture                     |
+| Info                  | TASKS.md              | info task                        |
+| Installation          | README.md             | Installation                     |
+| Migration             | MIGRATION.md          | All sections                     |
+| Modules-Untouched     | TASKS.md              | checkModulesUntouched task       |
 
-### Guidelines
+### P-Z
 
-- Use clear, concise language
-- Provide examples
-- Keep tables aligned
-- Test all commands
-- Update index when adding sections
+| Keyword               | Document              | Section                          |
+|-----------------------|-----------------------|----------------------------------|
+| Properties            | CONFIGURATION.md      | Build Properties                 |
+| Release               | TASKS.md              | release task                     |
+| Tasks                 | TASKS.md              | All sections                     |
+| Troubleshooting       | README.md, MIGRATION.md | Troubleshooting sections       |
+| Validation            | TASKS.md              | Verification Tasks               |
+| Verify                | TASKS.md              | verify task                      |
+| Versions              | TASKS.md              | listVersions task                |
 
-### Style Guide
+---
 
-- Use present tense
-- Use active voice
-- Use consistent terminology
-- Use proper Markdown formatting
+## Document Summaries
+
+### README.md
+
+**Purpose**: Main documentation and quick start guide
+
+**Contents**:
+- Overview of the Gradle build system
+- Quick start guide with basic commands
+- Installation instructions
+- Complete task reference
+- Configuration overview
+- Architecture and build process flow
+- Troubleshooting common issues
+- Migration guide summary
+
+**Target Audience**: All users, especially new users
+
+---
+
+### TASKS.md
+
+**Purpose**: Complete reference for all Gradle tasks
+
+**Contents**:
+- Build tasks (release, releaseAll, clean)
+- Verification tasks (verify, validateProperties, checkModulesUntouched)
+- Information tasks (info, listVersions, listReleases)
+- Task dependencies and execution order
+- Task examples and usage patterns
+- Task options and properties
+
+**Target Audience**: Developers and build engineers
+
+---
+
+### CONFIGURATION.md
+
+**Purpose**: Configuration guide for build system
+
+**Contents**:
+- Configuration files overview
+- Build properties reference
+- Gradle properties reference
+- Release properties reference
+- Environment variables
+- Build paths configuration
+- Archive format configuration
+- Configuration examples
+- Best practices
+
+**Target Audience**: Build engineers and advanced users
+
+---
+
+### MIGRATION.md
+
+**Purpose**: Guide for migrating from Ant to Gradle
+
+**Contents**:
+- Migration overview
+- What changed from Ant to Gradle
+- Command mapping (Ant to Gradle)
+- File changes
+- Configuration changes
+- Task equivalents
+- Troubleshooting migration issues
+- Benefits of migration
+- Next steps for developers, CI/CD, and contributors
+
+**Target Audience**: Users migrating from Ant build system
+
+---
+
+## Version History
+
+| Version       | Date       | Changes                                  |
+|---------------|------------|------------------------------------------|
+| 2025.8.20     | 2025-08-20 | Initial Gradle documentation             |
+|               |            | - Created README.md                      |
+|               |            | - Created TASKS.md                       |
+|               |            | - Created CONFIGURATION.md               |
+|               |            | - Created MIGRATION.md                   |
+|               |            | - Created INDEX.md                       |
+
+---
+
+## Contributing
+
+To contribute to the documentation:
+
+1. **Fork Repository**: Fork the module-memcached repository
+2. **Edit Documentation**: Make changes to documentation files
+3. **Follow Style**: Maintain consistent formatting and style
+4. **Test Examples**: Verify all code examples work
+5. **Submit PR**: Create pull request with changes
+
+### Documentation Style Guide
+
+- Use Markdown formatting
 - Include code examples
+- Use tables for structured data
+- Add links to related sections
+- Keep language clear and concise
+- Include practical examples
 
-### Submitting Changes
-
-1. Fork the repository
-2. Create a documentation branch
-3. Make your changes
-4. Test all examples
-5. Submit a pull request
+---
 
 ## Support
 
-### Getting Help
+For documentation issues or questions:
 
-- Read the documentation
-- Check troubleshooting sections
-- Search GitHub issues
-- Ask in discussions
-
-### Reporting Issues
-
-Report documentation issues at:
-
-https://github.com/bearsampp/bearsampp/issues
-
-Include:
-
-- Document name
-- Section name
-- Issue description
-- Suggested improvement
-
-## External Resources
-
-### Gradle
-
-- [Gradle Documentation](https://docs.gradle.org/)
-- [Gradle User Manual](https://docs.gradle.org/current/userguide/userguide.html)
-- [Gradle Build Language Reference](https://docs.gradle.org/current/dsl/)
-
-### Memcached
-
-- [Memcached Official](https://memcached.org/)
-- [Memcached Documentation](https://github.com/memcached/memcached/wiki)
-- [Memcached Downloads](https://memcached.org/downloads)
-
-### Bearsampp
-
-- [Bearsampp Project](https://github.com/bearsampp/bearsampp)
-- [Bearsampp Website](https://bearsampp.com)
-- [Bearsampp Documentation](https://bearsampp.com/docs)
-
-### Tools
-
-- [7-Zip](https://www.7-zip.org/)
-- [Git](https://git-scm.com/)
-- [Java](https://adoptium.net/)
-
-## Document History
-
-| Version      | Date         | Changes                                          |
-|-------------|--------------|--------------------------------------------------|
-| 2025.8.20   | 2025-08-20   | Initial documentation for pure Gradle build      |
+- **GitHub Issues**: https://github.com/bearsampp/module-memcached/issues
+- **Bearsampp Issues**: https://github.com/bearsampp/bearsampp/issues
+- **Documentation**: This directory (.gradle-docs/)
 
 ---
 
-**Last Updated:** 2025-08-20  
-**Version:** 2025.8.20  
-**Maintainer:** Bearsampp Team
+**Last Updated**: 2025-08-20  
+**Version**: 2025.8.20  
+**Total Documents**: 5
