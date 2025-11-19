@@ -9,22 +9,23 @@ This is a module of [Bearsampp project](https://github.com/bearsampp/bearsampp) 
 
 This project uses **Gradle** as its build system. The legacy Ant build has been fully replaced with a modern, pure Gradle implementation.
 
+### Key Features
+
+- **Automatic Downloads**: Fetches Memcached versions from [modules-untouched](https://github.com/Bearsampp/modules-untouched)
+- **Smart Caching**: Downloads are cached to speed up subsequent builds
+- **Multiple Formats**: Supports .7z, .zip, and .tar.gz archives
+- **Hash Generation**: Automatically creates MD5, SHA1, SHA256, and SHA512 checksums
+
 ### Quick Start
 
 ```bash
 # Display build information
 gradle info
 
-# List all available tasks
-gradle tasks
+# List available versions from modules-untouched
+gradle listReleases
 
-# Verify build environment
-gradle verify
-
-# Build a release (interactive)
-gradle release
-
-# Build a specific version (non-interactive)
+# Build a release (downloads automatically from modules-untouched)
 gradle release -PbundleVersion=1.6.29
 
 # Build all versions
@@ -33,6 +34,8 @@ gradle releaseAll
 # Clean build artifacts
 gradle clean
 ```
+
+**Note**: The build automatically downloads and extracts Memcached versions from the modules-untouched repository. You don't need to manually download or place files in the `bin/` directory.
 
 ### Prerequisites
 

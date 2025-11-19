@@ -89,6 +89,135 @@ def fetchModulesUntouchedProperties() {
     }
 }
 
+// Helper function to get module from modules-untouched (like Ant's getmoduleuntouched macro)
+def getModuleUntouched(String version) {
+    println "** Get Module Untouched"
+    println "* Name        : ${bundleName}"
+    println "* Version     : ${version}"
+
+    // Fetch the properties file
+    def untouchedProps = fetchModulesUntouchedProperties()
+    if (!untouchedProps) {
+        throw new GradleException("Could not fetch modules-untouched properties for version ${version}")
+    }
+
+    // Get the URL for this version
+    def downloadUrl = untouchedProps.getProperty(version)
+    if (!downloadUrl) {
+        throw new GradleException("Version ${version} not found in modules-untouched properties")
+    }
+
+    println "* Url         : ${downloadUrl}"
+
+    // Extract filename from URL
+    def filename = downloadUrl.tokenize('/').last()
+    println "* Filename    : ${filename}"
+
+    // Setup paths
+    def moduleTmpPath = file("${bundleTmpSrcPath}/${bundleName}")
+    def destFolder = "${bundleName}${version}"
+    def destPath = file("${moduleTmpPath}/${destFolder}")
+
+    println "* Destination : ${destPath}"
+
+    // Download the file if not already present
+    def downloadedFile = file("${moduleTmpPath}/${filename}")
+    if (!downloadedFile.exists()) {
+        println "Downloading ${filename}..."
+        moduleTmpPath.mkdirs()
+        
+        def connection = new URL(downloadUrl).openConnection()
+        connection.setRequestProperty("User-Agent", "Bearsampp-Build")
+        downloadedFile.withOutputStream { out ->
+            connection.inputStream.withCloseable { inp ->
+                out << inp
+            }
+        }
+        println "Downloaded: ${downloadedFile}"
+    } else {
+        println "Using cached: ${downloadedFile}"
+    }
+
+    // Extract the archive
+    if (destPath.exists()) {
+        delete destPath
+    }
+    destPath.mkdirs()
+
+    println "Processing ${filename}..."
+    
+    if (filename.endsWith('.7z') || filename.endsWith('.7z.exe')) {
+        // Extract 7z archive
+        def sevenZipExe = find7ZipExecutable()
+        if (!sevenZipExe) {
+            throw new GradleException("7-Zip executable not found! Please install 7-Zip.")
+        }
+
+        def command = [
+            sevenZipExe,
+            'x',
+            downloadedFile.absolutePath,
+            "-o${destPath.absolutePath}",
+            '-y'
+        ]
+
+        def process = new ProcessBuilder(command as String[])
+            .redirectErrorStream(true)
+            .start()
+
+        process.inputStream.eachLine { line ->
+            println line
+        }
+
+        def exitCode = process.waitFor()
+        if (exitCode != 0) {
+            throw new GradleException("7-Zip extraction failed with exit code: ${exitCode}")
+        }
+
+    } else if (filename.endsWith('.zip')) {
+        // Extract ZIP archive
+        copy {
+            from zipTree(downloadedFile)
+            into destPath
+        }
+    } else if (filename.endsWith('.tar.gz')) {
+        // Extract tar.gz archive
+        copy {
+            from tarTree(resources.gzip(downloadedFile))
+            into destPath
+        }
+    } else {
+        throw new GradleException("Unknown archive format: ${filename}")
+    }
+
+    println "Extracted to: ${destPath}"
+
+    // Check for nested directory structure (some archives have memcached-x86 subdirectory)
+    def memcachedX86 = file("${destPath}/memcached-x86")
+    if (memcachedX86.exists() && memcachedX86.isDirectory()) {
+        println "Found memcached-x86 subdirectory, using that as source"
+        return memcachedX86
+    }
+
+    // Verify memcached.exe exists
+    def memcachedExe = file("${destPath}/memcached.exe")
+    if (!memcachedExe.exists()) {
+        // Check if there's a single subdirectory with memcached.exe
+        def subdirs = destPath.listFiles()?.findAll { it.isDirectory() }
+        if (subdirs && subdirs.size() == 1) {
+            def subdir = subdirs[0]
+            memcachedExe = file("${subdir}/memcached.exe")
+            if (memcachedExe.exists()) {
+                println "Found memcached.exe in subdirectory: ${subdir.name}"
+                return subdir
+            }
+        }
+        throw new GradleException("memcached.exe not found in extracted archive at ${destPath}")
+    }
+
+    return destPath
+}
+
 // Helper function to find 7-Zip executable
 def find7ZipExecutable() {
     // Check environment variable
@@ -372,19 +501,11 @@ tasks.register('release') {
         println "=".multiply(70)
         println ""
 
-        // Validate version exists - check both bin and bin/archived directories
-        def bundlePath = file("${projectDir}/bin/${bundleName}${versionToBuild}")
-        if (!bundlePath.exists()) {
-            bundlePath = file("${projectDir}/bin/archived/${bundleName}${versionToBuild}")
-            if (!bundlePath.exists()) {
-                throw new GradleException("Bundle version not found in bin/ or bin/archived/\n\nAvailable versions:\n${getAvailableVersions().collect { "  - ${it}" }.join('\n')}")
-            }
-        }
+        // Get module from modules-untouched (downloads and extracts if needed)
+        def bundleSrcFinal = getModuleUntouched(versionToBuild)
 
-        def bundleSrcDest = bundlePath
-        def bundleSrcFinal = bundleSrcDest
-
-        println "Bundle path: ${bundleSrcFinal}"
+        println ""
+        println "Source ready: ${bundleSrcFinal}"
         println ""
 
         // Get the bundle folder and version
@@ -401,7 +522,7 @@ tasks.register('release') {
         // Copy Memcached files
         println "Copying Memcached files..."
         copy {
-            from bundleSrcDest
+            from bundleSrcFinal
             into memcachedPrepPath
         }
 

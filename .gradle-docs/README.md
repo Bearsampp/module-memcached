@@ -296,13 +296,62 @@ bearsampp-build/bins/memcached/2025.8.20/
 
 ### Modules-Untouched Integration
 
-The build system integrates with the [modules-untouched repository](https://github.com/Bearsampp/modules-untouched) to fetch version information:
+The build system **automatically downloads and extracts** Memcached versions from the [modules-untouched repository](https://github.com/Bearsampp/modules-untouched), similar to how the legacy Ant build worked:
 
 - **Repository**: `https://github.com/Bearsampp/modules-untouched`
 - **Properties File**: `modules/memcached.properties`
-- **Purpose**: Centralized version management and download URLs
+- **Purpose**: Centralized version management and automatic downloads
 
-The `listReleases` and `checkModulesUntouched` tasks query this repository to display available Memcached versions.
+#### How It Works
+
+When you run `gradle release -PbundleVersion=1.6.29`, the build:
+
+1. **Fetches** the `memcached.properties` file from modules-untouched
+2. **Looks up** the download URL for version 1.6.29
+3. **Downloads** the archive (cached in `bearsampp-build/tmp/bundles_src/`)
+4. **Extracts** the archive automatically
+5. **Validates** that memcached.exe exists
+6. **Builds** the release package
+
+#### Download Caching
+
+Downloaded archives are cached in `bearsampp-build/tmp/bundles_src/memcached/`:
+- First build: Downloads from modules-untouched
+- Subsequent builds: Reuses cached download
+- Saves bandwidth and speeds up builds
+
+#### Supported Archive Formats
+
+The build automatically handles:
+- `.7z` - 7-Zip archives
+- `.zip` - ZIP archives  
+- `.tar.gz` - Gzipped tar archives
+
+#### No Local bin/ Directory Required
+
+Unlike the old workflow, you **don't need** to manually download and place files in `bin/`:
+- The build downloads directly from modules-untouched
+- Archives are extracted automatically
+- Nested directory structures (like `memcached-x86/`) are handled
+
+#### Verification Tasks
+
+| Task                      | Description                                  |
+|---------------------------|----------------------------------------------|
+| `listReleases`            | List all versions available in modules-untouched |
+| `checkModulesUntouched`   | Verify connection and list available versions |
+
+Example:
+```bash
+# See what versions are available
+gradle listReleases
+
+# Verify modules-untouched integration
+gradle checkModulesUntouched
+
+# Build any available version
+gradle release -PbundleVersion=1.6.38
+```
 
 ---
 
