@@ -519,11 +519,33 @@ tasks.register('release') {
         }
         memcachedPrepPath.mkdirs()
 
-        // Copy Memcached files
-        println "Copying Memcached files..."
+        // Copy Memcached files from modules-untouched
+        println "Copying Memcached files from modules-untouched..."
         copy {
             from bundleSrcFinal
             into memcachedPrepPath
+        }
+
+        // Overlay Bearsampp-specific files from bin directory
+        def binOverlayPath = file("${projectDir}/bin/${bundleName}${bundleVersion}")
+        def archivedOverlayPath = file("${projectDir}/bin/archived/${bundleName}${bundleVersion}")
+        
+        def overlaySource = null
+        if (binOverlayPath.exists()) {
+            overlaySource = binOverlayPath
+        } else if (archivedOverlayPath.exists()) {
+            overlaySource = archivedOverlayPath
+        }
+        
+        if (overlaySource) {
+            println "Overlaying Bearsampp-specific files from ${overlaySource}..."
+            copy {
+                from overlaySource
+                into memcachedPrepPath
+                exclude '**/.gitkeep'
+            }
+        } else {
+            println "Warning: No overlay files found in bin/${bundleName}${bundleVersion} or bin/archived/${bundleName}${bundleVersion}"
         }
 
         println ""
