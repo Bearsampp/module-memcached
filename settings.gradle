@@ -1,0 +1,10 @@
+rootProject.name = 'module-memcached'
+
+enableFeaturePreview('STABLE_CONFIGURATION_CACHE')
+
+buildCache {
+    local {
+        enabled = true
+        directory = file("${rootDir}/.gradle/build-cache")
+    }
+}

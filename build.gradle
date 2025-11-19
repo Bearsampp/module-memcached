@@ -1,0 +1,1017 @@
+/*
+ * Bearsampp Module Memcached - Gradle Build
+ *
+ * This is a modern Gradle build configuration that:
+ * 1. Provides native Gradle features (caching, incremental builds, parallel execution)
+ * 2. Supports both interactive and non-interactive release builds
+ * 3. Integrates with modules-untouched repository for version management
+ * 4. Generates hash files (MD5, SHA1, SHA256, SHA512) for releases
+ *
+ * Usage:
+ *   gradle tasks                              - List all available tasks
+ *   gradle release -PbundleVersion=1.6.29     - Build release for specific version
+ *   gradle releaseAll                         - Build releases for all available versions
+ *   gradle clean                              - Clean build artifacts
+ *   gradle info                               - Display build information
+ *   gradle verify                             - Verify build environment
+ *   gradle listVersions                       - List available versions in bin/
+ *   gradle listReleases                       - List available releases from modules-untouched
+ *   gradle checkModulesUntouched              - Check modules-untouched integration
+ */
+
+plugins {
+    id 'base'
+}
+
+// Load build properties
+def buildProps = new Properties()
+file('build.properties').withInputStream { buildProps.load(it) }
+
+// Project information
+group = 'com.bearsampp.modules'
+version = buildProps.getProperty('bundle.release', '1.0.0')
+description = "Bearsampp Module - ${buildProps.getProperty('bundle.name', 'memcached')}"
+
+// Define project paths
+ext {
+    projectBasedir = projectDir.absolutePath
+    rootDir = projectDir.parent
+    devPath = file("${rootDir}/dev").absolutePath
+    buildPropertiesFile = file('build.properties').absolutePath
+
+    // Bundle properties from build.properties
+    bundleName = buildProps.getProperty('bundle.name', 'memcached')
+    bundleRelease = buildProps.getProperty('bundle.release', '1.0.0')
+    bundleType = buildProps.getProperty('bundle.type', 'bins')
+    bundleFormat = buildProps.getProperty('bundle.format', '7z')
+
+    // Build paths - with configurable base path
+    // Priority: 1) build.properties, 2) Environment variable, 3) Default
+    def buildPathFromProps = buildProps.getProperty('build.path', '').trim()
+    def buildPathFromEnv = System.getenv('BEARSAMPP_BUILD_PATH') ?: ''
+    def defaultBuildPath = "${rootDir}/bearsampp-build"
+
+    buildBasePath = buildPathFromProps ?: (buildPathFromEnv ?: defaultBuildPath)
+
+    // Use shared bearsampp-build/tmp directory structure (same as Ant builds)
+    buildTmpPath = file("${buildBasePath}/tmp").absolutePath
+    bundleTmpBuildPath = file("${buildTmpPath}/bundles_build/${bundleType}/${bundleName}").absolutePath
+    bundleTmpPrepPath = file("${buildTmpPath}/bundles_prep/${bundleType}/${bundleName}").absolutePath
+    bundleTmpSrcPath = file("${buildTmpPath}/bundles_src").absolutePath
+}
+
+// Configure repositories for dependencies
+repositories {
+    mavenCentral()
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+// Helper function to fetch modules-untouched properties
+def fetchModulesUntouchedProperties() {
+    def propsUrl = "https://raw.githubusercontent.com/Bearsampp/modules-untouched/main/modules/memcached.properties"
+    try {
+        def connection = new URL(propsUrl).openConnection()
+        connection.setRequestProperty("User-Agent", "Bearsampp-Build")
+        connection.setConnectTimeout(5000)
+        connection.setReadTimeout(5000)
+
+        def props = new Properties()
+        connection.inputStream.withCloseable { stream ->
+            props.load(stream)
+        }
+        return props
+    } catch (Exception e) {
+        println "Warning: Could not fetch modules-untouched properties: ${e.message}"
+        return null
+    }
+}
+
+// Helper function to get module from modules-untouched (like Ant's getmoduleuntouched macro)
+def getModuleUntouched(String version) {
+    println "** Get Module Untouched"
+    println "* Name        : ${bundleName}"
+    println "* Version     : ${version}"
+
+    // Fetch the properties file
+    def untouchedProps = fetchModulesUntouchedProperties()
+    if (!untouchedProps) {
+        throw new GradleException("Could not fetch modules-untouched properties for version ${version}")
+    }
+
+    // Get the URL for this version
+    def downloadUrl = untouchedProps.getProperty(version)
+    if (!downloadUrl) {
+        throw new GradleException("Version ${version} not found in modules-untouched properties")
+    }
+
+    println "* Url         : ${downloadUrl}"
+
+    // Extract filename from URL
+    def filename = downloadUrl.tokenize('/').last()
+    println "* Filename    : ${filename}"
+
+    // Setup paths
+    def moduleTmpPath = file("${bundleTmpSrcPath}/${bundleName}")
+    def destFolder = "${bundleName}${version}"
+    def destPath = file("${moduleTmpPath}/${destFolder}")
+
+    println "* Destination : ${destPath}"
+
+    // Download the file if not already present
+    def downloadedFile = file("${moduleTmpPath}/${filename}")
+    if (!downloadedFile.exists()) {
+        println "Downloading ${filename}..."
+        moduleTmpPath.mkdirs()
+        
+        def connection = new URL(downloadUrl).openConnection()
+        connection.setRequestProperty("User-Agent", "Bearsampp-Build")
+        downloadedFile.withOutputStream { out ->
+            connection.inputStream.withCloseable { inp ->
+                out << inp
+            }
+        }
+        println "Downloaded: ${downloadedFile}"
+    } else {
+        println "Using cached: ${downloadedFile}"
+    }
+
+    // Extract the archive
+    if (destPath.exists()) {
+        delete destPath
+    }
+    destPath.mkdirs()
+
+    println "Processing ${filename}..."
+    
+    if (filename.endsWith('.7z') || filename.endsWith('.7z.exe')) {
+        // Extract 7z archive
+        def sevenZipExe = find7ZipExecutable()
+        if (!sevenZipExe) {
+            throw new GradleException("7-Zip executable not found! Please install 7-Zip.")
+        }
+
+        def command = [
+            sevenZipExe,
+            'x',
+            downloadedFile.absolutePath,
+            "-o${destPath.absolutePath}",
+            '-y'
+        ]
+
+        def process = new ProcessBuilder(command as String[])
+            .redirectErrorStream(true)
+            .start()
+
+        process.inputStream.eachLine { line ->
+            println line
+        }
+
+        def exitCode = process.waitFor()
+        if (exitCode != 0) {
+            throw new GradleException("7-Zip extraction failed with exit code: ${exitCode}")
+        }
+
+    } else if (filename.endsWith('.zip')) {
+        // Extract ZIP archive
+        copy {
+            from zipTree(downloadedFile)
+            into destPath
+        }
+    } else if (filename.endsWith('.tar.gz')) {
+        // Extract tar.gz archive
+        copy {
+            from tarTree(resources.gzip(downloadedFile))
+            into destPath
+        }
+    } else {
+        throw new GradleException("Unknown archive format: ${filename}")
+    }
+
+    println "Extracted to: ${destPath}"
+
+    // Check for nested directory structure (some archives have memcached-x86 subdirectory)
+    def memcachedX86 = file("${destPath}/memcached-x86")
+    if (memcachedX86.exists() && memcachedX86.isDirectory()) {
+        println "Found memcached-x86 subdirectory, using that as source"
+        return memcachedX86
+    }
+
+    // Verify memcached.exe exists
+    def memcachedExe = file("${destPath}/memcached.exe")
+    if (!memcachedExe.exists()) {
+        // Check if there's a single subdirectory with memcached.exe
+        def subdirs = destPath.listFiles()?.findAll { it.isDirectory() }
+        if (subdirs && subdirs.size() == 1) {
+            def subdir = subdirs[0]
+            memcachedExe = file("${subdir}/memcached.exe")
+            if (memcachedExe.exists()) {
+                println "Found memcached.exe in subdirectory: ${subdir.name}"
+                return subdir
+            }
+        }
+        throw new GradleException("memcached.exe not found in extracted archive at ${destPath}")
+    }
+
+    return destPath
+}
+
+// Helper function to find 7-Zip executable
+def find7ZipExecutable() {
+    // Check environment variable
+    def sevenZipHome = System.getenv('7Z_HOME')
+    if (sevenZipHome) {
+        def exe = file("${sevenZipHome}/7z.exe")
+        if (exe.exists()) {
+            return exe.absolutePath
+        }
+    }
+
+    // Check common installation paths
+    def commonPaths = [
+        'C:/Program Files/7-Zip/7z.exe',
+        'C:/Program Files (x86)/7-Zip/7z.exe',
+        'D:/Program Files/7-Zip/7z.exe',
+        'D:/Program Files (x86)/7-Zip/7z.exe'
+    ]
+
+    for (path in commonPaths) {
+        def exe = file(path)
+        if (exe.exists()) {
+            return exe.absolutePath
+        }
+    }
+
+    // Try to find in PATH
+    try {
+        def process = ['where', '7z.exe'].execute()
+        process.waitFor()
+        if (process.exitValue() == 0) {
+            def output = process.text.trim()
+            if (output) {
+                return output.split('\n')[0].trim()
+            }
+        }
+    } catch (Exception e) {
+        // Ignore
+    }
+
+    return null
+}
+
+// Helper function to generate hash files
+def generateHashFiles(File file) {
+    if (!file.exists()) {
+        throw new GradleException("File not found for hashing: ${file}")
+    }
+
+    // Generate MD5
+    def md5File = new File("${file.absolutePath}.md5")
+    def md5Hash = calculateHash(file, 'MD5')
+    md5File.text = "${md5Hash} ${file.name}\n"
+    println "  Created: ${md5File.name}"
+
+    // Generate SHA1
+    def sha1File = new File("${file.absolutePath}.sha1")
+    def sha1Hash = calculateHash(file, 'SHA-1')
+    sha1File.text = "${sha1Hash} ${file.name}\n"
+    println "  Created: ${sha1File.name}"
+
+    // Generate SHA256
+    def sha256File = new File("${file.absolutePath}.sha256")
+    def sha256Hash = calculateHash(file, 'SHA-256')
+    sha256File.text = "${sha256Hash} ${file.name}\n"
+    println "  Created: ${sha256File.name}"
+
+    // Generate SHA512
+    def sha512File = new File("${file.absolutePath}.sha512")
+    def sha512Hash = calculateHash(file, 'SHA-512')
+    sha512File.text = "${sha512Hash} ${file.name}\n"
+    println "  Created: ${sha512File.name}"
+}
+
+// Helper function to calculate hash
+def calculateHash(File file, String algorithm) {
+    def digest = java.security.MessageDigest.getInstance(algorithm)
+    file.withInputStream { stream ->
+        def buffer = new byte[8192]
+        def bytesRead
+        while ((bytesRead = stream.read(buffer)) != -1) {
+            digest.update(buffer, 0, bytesRead)
+        }
+    }
+    return digest.digest().collect { String.format('%02x', it) }.join('')
+}
+
+// Helper function to get available versions
+def getAvailableVersions() {
+    def versions = []
+
+    // Check bin directory
+    def binDir = file("${projectDir}/bin")
+    if (binDir.exists()) {
+        def binVersions = binDir.listFiles()
+            ?.findAll { it.isDirectory() && it.name.startsWith(bundleName) && it.name != 'archived' }
+            ?.collect { it.name.replace(bundleName, '') } ?: []
+        versions.addAll(binVersions)
+    }
+
+    // Check bin/archived subdirectory
+    def archivedDir = file("${projectDir}/bin/archived")
+    if (archivedDir.exists()) {
+        def archivedVersions = archivedDir.listFiles()
+            ?.findAll { it.isDirectory() && it.name.startsWith(bundleName) }
+            ?.collect { it.name.replace(bundleName, '') } ?: []
+        versions.addAll(archivedVersions)
+    }
+
+    // Remove duplicates and sort
+    return versions.unique().sort()
+}
+
+// ============================================================================
+// GRADLE NATIVE TASKS
+// ============================================================================
+
+// Task: Display build information
+tasks.register('info') {
+    group = 'help'
+    description = 'Display build configuration information'
+
+    def projectName = project.name
+    def projectVersion = project.version
+    def projectDescription = project.description
+    def gradleVersion = gradle.gradleVersion
+    def gradleHome = gradle.gradleHomeDir
+
+    doLast {
+        println """
+        ================================================================
+                Bearsampp Module Memcached - Build Info
+        ================================================================
+
+        Project:        ${projectName}
+        Version:        ${projectVersion}
+        Description:    ${projectDescription}
+
+        Bundle Properties:
+          Name:         ${bundleName}
+          Release:      ${bundleRelease}
+          Type:         ${bundleType}
+          Format:       ${bundleFormat}
+
+        Paths:
+          Project Dir:  ${projectBasedir}
+          Root Dir:     ${rootDir}
+          Dev Path:     ${devPath}
+          Build Base:   ${buildBasePath}
+          Build Tmp:    ${buildTmpPath}
+          Tmp Prep:     ${bundleTmpPrepPath}
+          Tmp Build:    ${bundleTmpBuildPath}
+          Tmp Src:      ${bundleTmpSrcPath}
+
+        Java:
+          Version:      ${JavaVersion.current()}
+          Home:         ${System.getProperty('java.home')}
+
+        Gradle:
+          Version:      ${gradleVersion}
+          Home:         ${gradleHome}
+
+        Available Task Groups:
+          * build        - Build and package tasks
+          * help         - Help and information tasks
+          * verification - Verification and validation tasks
+
+        Quick Start:
+          gradle tasks                              - List all available tasks
+          gradle info                               - Show this information
+          gradle release                            - Build release (interactive mode)
+          gradle release -PbundleVersion=1.6.29     - Build release for version
+          gradle releaseAll                         - Build all available versions
+          gradle clean                              - Clean build artifacts
+          gradle verify                             - Verify build environment
+          gradle listVersions                       - List available versions
+          gradle checkModulesUntouched              - Check modules-untouched integration
+        """.stripIndent()
+    }
+}
+
+// Task: Main release task - build release for specific version
+tasks.register('release') {
+    group = 'build'
+    description = 'Build release package for a specific version (use -PbundleVersion=X.X.X or run interactively)'
+
+    // Capture property at configuration time to avoid deprecation warning
+    def versionProperty = project.findProperty('bundleVersion')
+
+    doLast {
+        def versionToBuild = versionProperty
+
+        if (!versionToBuild) {
+            // Interactive mode - prompt for version
+            def availableVersions = getAvailableVersions()
+
+            if (availableVersions.isEmpty()) {
+                throw new GradleException("No versions found in bin/ directory")
+            }
+
+            println ""
+            println "=".multiply(70)
+            println "Interactive Release Mode"
+            println "=".multiply(70)
+            println ""
+            println "Available versions:"
+
+            // Show versions with location tags
+            def binDir = file("${projectDir}/bin")
+            def archivedDir = file("${projectDir}/bin/archived")
+
+            availableVersions.eachWithIndex { version, index ->
+                def location = ""
+                if (binDir.exists() && file("${binDir}/${bundleName}${version}").exists()) {
+                    location = "[bin]"
+                } else if (archivedDir.exists() && file("${archivedDir}/${bundleName}${version}").exists()) {
+                    location = "[bin/archived]"
+                }
+                println "  ${(index + 1).toString().padLeft(2)}. ${version.padRight(15)} ${location}"
+            }
+            println ""
+            println "Enter version to build (index or version string):"
+            println ""
+
+            // Read input using Gradle's standard input
+            def input = null
+            try {
+                def reader = new BufferedReader(new InputStreamReader(System.in))
+                input = reader.readLine()
+            } catch (Exception e) {
+                throw new GradleException("""
+                    Failed to read input. Please use non-interactive mode:
+                      gradle release -PbundleVersion=X.X.X
+
+                    Available versions: ${availableVersions.join(', ')}
+                """.stripIndent())
+            }
+
+            if (!input || input.trim().isEmpty()) {
+                throw new GradleException("""
+                    No version selected. Please use non-interactive mode:
+                      gradle release -PbundleVersion=X.X.X
+
+                    Available versions: ${availableVersions.join(', ')}
+                """.stripIndent())
+            }
+
+            def cleaned = input.trim()
+
+            // Accept either an index (1..N) or an explicit version string
+            if (cleaned.isInteger()) {
+                def idx = cleaned.toInteger()
+                if (idx < 1 || idx > availableVersions.size()) {
+                    throw new GradleException("""
+                        Invalid selection index: ${cleaned}
+
+                        Please choose a number between 1 and ${availableVersions.size()} or enter a version string.
+                    """.stripIndent())
+                }
+                versionToBuild = availableVersions[idx - 1]
+            } else {
+                versionToBuild = cleaned
+                // Validate the entered version string exists
+                if (!availableVersions.contains(versionToBuild)) {
+                    throw new GradleException("""
+                        Invalid version: ${versionToBuild}
+
+                        Please choose from available versions:
+                        ${availableVersions.collect { "  - ${it}" }.join('\n')}
+                    """.stripIndent())
+                }
+            }
+
+            println ""
+            println "Selected version: ${versionToBuild}"
+        }
+
+        println ""
+        println "=".multiply(70)
+        println "Building ${bundleName} ${versionToBuild}"
+        println "=".multiply(70)
+        println ""
+
+        // Get module from modules-untouched (downloads and extracts if needed)
+        def bundleSrcFinal = getModuleUntouched(versionToBuild)
+
+        println ""
+        println "Source ready: ${bundleSrcFinal}"
+        println ""
+
+        // Get the bundle folder and version
+        def bundleFolder = bundleSrcFinal.name
+        def bundleVersion = bundleFolder.replace(bundleName, '')
+
+        // Prepare output directory
+        def memcachedPrepPath = file("${bundleTmpPrepPath}/${bundleName}${bundleVersion}")
+        if (memcachedPrepPath.exists()) {
+            delete memcachedPrepPath
+        }
+        memcachedPrepPath.mkdirs()
+
+        // Copy Memcached files from modules-untouched
+        println "Copying Memcached files from modules-untouched..."
+        copy {
+            from bundleSrcFinal
+            into memcachedPrepPath
+        }
+
+        // Overlay Bearsampp-specific files from bin directory
+        def binOverlayPath = file("${projectDir}/bin/${bundleName}${bundleVersion}")
+        def archivedOverlayPath = file("${projectDir}/bin/archived/${bundleName}${bundleVersion}")
+        
+        def overlaySource = null
+        if (binOverlayPath.exists()) {
+            overlaySource = binOverlayPath
+        } else if (archivedOverlayPath.exists()) {
+            overlaySource = archivedOverlayPath
+        }
+        
+        if (overlaySource) {
+            println "Overlaying Bearsampp-specific files from ${overlaySource}..."
+            copy {
+                from overlaySource
+                into memcachedPrepPath
+                exclude '**/.gitkeep'
+            }
+        } else {
+            println "Warning: No overlay files found in bin/${bundleName}${bundleVersion} or bin/archived/${bundleName}${bundleVersion}"
+        }
+
+        println ""
+        println "Copying to bundles_build directory..."
+        def memcachedBuildPath = file("${bundleTmpBuildPath}/${bundleName}${bundleVersion}")
+        if (memcachedBuildPath.exists()) {
+            delete memcachedBuildPath
+        }
+        memcachedBuildPath.mkdirs()
+
+        copy {
+            from memcachedPrepPath
+            into memcachedBuildPath
+        }
+        println "Non-zip version available at: ${memcachedBuildPath}"
+
+        println ""
+
+        // Build archive filename
+        // bearsampp-build/bins/memcached/{bundleRelease} for bins
+        // bearsampp-build/tools/memcached/{bundleRelease} for tools
+        def buildPath = file(buildBasePath)
+        def buildBinsPath = file("${buildPath}/${bundleType}/${bundleName}/${bundleRelease}")
+        buildBinsPath.mkdirs()
+
+        def destFile = file("${buildBinsPath}/bearsampp-${bundleName}-${bundleVersion}-${bundleRelease}")
+
+        // Compress based on format
+        if (bundleFormat == '7z') {
+            // 7z format
+            def archiveFile = file("${destFile}.7z")
+            if (archiveFile.exists()) {
+                delete archiveFile
+            }
+
+            println "Compressing ${bundleName}${bundleVersion} to ${archiveFile.name}..."
+
+            // Find 7z executable
+            def sevenZipExe = find7ZipExecutable()
+            if (!sevenZipExe) {
+                throw new GradleException("""
+                    7-Zip executable not found!
+
+                    Please install 7-Zip or set 7Z_HOME environment variable.
+
+                    Download from: https://www.7-zip.org/
+                """.stripIndent())
+            }
+
+            // Create 7z archive and ensure the top-level version folder is included
+            // We run 7-Zip from the parent prep directory and add the version folder explicitly
+            def command = [
+                sevenZipExe,
+                'a',
+                '-t7z',
+                '-mx9',
+                archiveFile.absolutePath.toString(),
+                "${bundleName}${bundleVersion}"
+            ]
+
+            def process = new ProcessBuilder(command as String[])
+                .directory(new File(bundleTmpPrepPath))
+                .redirectErrorStream(true)
+                .start()
+
+            process.inputStream.eachLine { line ->
+                println line
+            }
+
+            def exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw new GradleException("7-Zip failed with exit code: ${exitCode}")
+            }
+
+            println "Archive created: ${archiveFile}"
+
+            // Generate hash files
+            println "Generating hash files..."
+            generateHashFiles(archiveFile)
+
+        } else {
+            // ZIP format - using native Gradle zip task
+            def archiveFile = file("${destFile}.zip")
+            if (archiveFile.exists()) {
+                delete archiveFile
+            }
+
+            println "Compressing ${bundleName}${bundleVersion} to ${archiveFile.name}..."
+
+            // Create ZIP archive using Gradle's built-in zip functionality
+            // Include the top-level version folder inside the archive
+            task("zipArchive_${bundleVersion}", type: Zip) {
+                from(memcachedPrepPath) {
+                    into "${bundleName}${bundleVersion}"
+                }
+                destinationDirectory = archiveFile.parentFile
+                archiveFileName = archiveFile.name
+            }.execute()
+
+            println "Archive created: ${archiveFile}"
+
+            // Generate hash files
+            println "Generating hash files..."
+            generateHashFiles(archiveFile)
+        }
+
+        println "=".multiply(70)
+        println "[SUCCESS] Release build completed successfully for version ${versionToBuild}"
+        println "Output directory: ${memcachedBuildPath}"
+        println "Archive: ${destFile}.${bundleFormat}"
+        println "=".multiply(70)
+    }
+}
+
+// Task: Build all available versions
+tasks.register('releaseAll') {
+    group = 'build'
+    description = 'Build release packages for all available versions in bin/ directory'
+
+    doLast {
+        def binDir = file("${projectDir}/bin")
+        if (!binDir.exists()) {
+            throw new GradleException("bin/ directory not found")
+        }
+
+        def versions = getAvailableVersions()
+
+        if (versions.isEmpty()) {
+            throw new GradleException("No versions found in bin/ directory")
+        }
+
+        println ""
+        println "=".multiply(70)
+        println "Building releases for ${versions.size()} ${bundleName} versions"
+        println "=".multiply(70)
+        println ""
+
+        def successCount = 0
+        def failedVersions = []
+
+        versions.each { version ->
+            println "=".multiply(70)
+            println "[${successCount + 1}/${versions.size()}] Building ${bundleName} ${version}..."
+            println "=".multiply(70)
+
+            try {
+                // Call the release task logic for this version
+                def bundlePath = file("${projectDir}/bin/${bundleName}${version}")
+                def archivedPath = file("${projectDir}/bin/archived/${bundleName}${version}")
+
+                def bundleSrcDest = null
+                if (bundlePath.exists()) {
+                    bundleSrcDest = bundlePath
+                } else if (archivedPath.exists()) {
+                    bundleSrcDest = archivedPath
+                } else {
+                    throw new GradleException("Bundle path not found for version ${version}")
+                }
+
+                println "Bundle path: ${bundleSrcDest}"
+                println ""
+
+                // Get the bundle folder and version
+                def bundleFolder = bundleSrcDest.name
+                def bundleVersion = bundleFolder.replace(bundleName, '')
+
+                // Prepare output directory
+                def memcachedPrepPath = file("${bundleTmpPrepPath}/${bundleName}${bundleVersion}")
+                if (memcachedPrepPath.exists()) {
+                    delete memcachedPrepPath
+                }
+                memcachedPrepPath.mkdirs()
+
+                // Copy Memcached files
+                println "Copying Memcached files..."
+                copy {
+                    from bundleSrcDest
+                    into memcachedPrepPath
+                }
+
+                println ""
+                println "[SUCCESS] ${bundleName} ${version} completed"
+                println "Output: ${memcachedPrepPath}"
+                successCount++
+
+            } catch (Exception e) {
+                println ""
+                println "[FAILED] ${bundleName} ${version}: ${e.message}"
+                failedVersions.add(version)
+            }
+
+            println ""
+        }
+
+        // Summary
+        println "=".multiply(70)
+        println "Build Summary"
+        println "=".multiply(70)
+        println "Total versions: ${versions.size()}"
+        println "Successful:     ${successCount}"
+        println "Failed:         ${failedVersions.size()}"
+
+        if (!failedVersions.isEmpty()) {
+            println ""
+            println "Failed versions:"
+            failedVersions.each { v ->
+                println "  - ${v}"
+            }
+        }
+
+        println "=".multiply(70)
+
+        if (failedVersions.isEmpty()) {
+            println "[SUCCESS] All versions built successfully!"
+        } else {
+            throw new GradleException("${failedVersions.size()} version(s) failed to build")
+        }
+    }
+}
+
+// Task: Enhanced clean task
+tasks.named('clean') {
+    group = 'build'
+    description = 'Clean build artifacts and temporary files'
+
+    doLast {
+        // Clean Gradle build directory
+        def buildDir = file("${projectDir}/build")
+        if (buildDir.exists()) {
+            delete buildDir
+        }
+
+        println "[SUCCESS] Build artifacts cleaned"
+    }
+}
+
+// Task: Verify build environment
+tasks.register('verify') {
+    group = 'verification'
+    description = 'Verify build environment and dependencies'
+
+    doLast {
+        println "Verifying build environment for module-memcached..."
+
+        def checks = [:]
+
+        // Check Java version
+        def javaVersion = JavaVersion.current()
+        checks['Java 8+'] = javaVersion >= JavaVersion.VERSION_1_8
+
+        // Check required files
+        checks['build.properties'] = file('build.properties').exists()
+
+        // Check dev directory
+        checks['dev directory'] = file(devPath).exists()
+
+        // Check bin directory
+        checks['bin directory'] = file("${projectDir}/bin").exists()
+
+        // Check 7-Zip if format is 7z
+        if (bundleFormat == '7z') {
+            checks['7-Zip'] = find7ZipExecutable() != null
+        }
+
+        println "\nEnvironment Check Results:"
+        println "-".multiply(60)
+        checks.each { name, passed ->
+            def status = passed ? "[PASS]" : "[FAIL]"
+            println "  ${status.padRight(10)} ${name}"
+        }
+        println "-".multiply(60)
+
+        def allPassed = checks.values().every { it }
+        if (allPassed) {
+            println "\n[SUCCESS] All checks passed! Build environment is ready."
+            println "\nYou can now run:"
+            println "  gradle release -PbundleVersion=1.6.29   - Build release for version"
+            println "  gradle listVersions                     - List available versions"
+        } else {
+            println "\n[WARNING] Some checks failed. Please review the requirements."
+            throw new GradleException("Build environment verification failed")
+        }
+    }
+}
+
+// Task: List all bundle versions from modules-untouched memcached.properties
+tasks.register('listReleases') {
+    group = 'help'
+    description = 'List all available releases from modules-untouched memcached.properties'
+
+    doLast {
+        def props = fetchModulesUntouchedProperties()
+        if (!props) {
+            println "\n[WARNING] Could not fetch modules-untouched memcached.properties."
+            println "No release information available."
+            return
+        }
+
+        println "\nAvailable Memcached Releases (modules-untouched):"
+        println "-".multiply(80)
+        props.sort { a, b -> a.key <=> b.key }.each { version, url ->
+            println "  ${version.padRight(10)} -> ${url}"
+        }
+        println "-".multiply(80)
+        println "Total releases: ${props.size()}"
+    }
+}
+
+// Task: List available bundle versions in bin and bin/archived directories
+tasks.register('listVersions') {
+    group = 'help'
+    description = 'List all available bundle versions in bin/ and bin/archived/ directories'
+
+    doLast {
+        def versions = getAvailableVersions()
+
+        if (versions.isEmpty()) {
+            println "\nNo versions found in bin/ or bin/archived/ directories"
+            return
+        }
+
+        println "\nAvailable ${bundleName} versions:"
+        println "-".multiply(60)
+
+        // Show which directory each version is in
+        def binDir = file("${projectDir}/bin")
+        def archivedDir = file("${projectDir}/bin/archived")
+
+        versions.each { version ->
+            def location = ""
+            if (binDir.exists() && file("${binDir}/${bundleName}${version}").exists()) {
+                location = "[bin]"
+            } else if (archivedDir.exists() && file("${archivedDir}/${bundleName}${version}").exists()) {
+                location = "[bin/archived]"
+            }
+            println "  ${version.padRight(15)} ${location}"
+        }
+        println "-".multiply(60)
+        println "Total versions: ${versions.size()}"
+
+        if (!versions.isEmpty()) {
+            println "\nTo build a specific version:"
+            println "  gradle release -PbundleVersion=${versions.last()}"
+        }
+    }
+}
+
+// Task: Validate build.properties
+tasks.register('validateProperties') {
+    group = 'verification'
+    description = 'Validate build.properties configuration'
+
+    doLast {
+        println "Validating build.properties..."
+
+        def required = ['bundle.name', 'bundle.release', 'bundle.type', 'bundle.format']
+        def missing = []
+
+        required.each { prop ->
+            if (!buildProps.containsKey(prop) || buildProps.getProperty(prop).trim().isEmpty()) {
+                missing.add(prop)
+            }
+        }
+
+        if (missing.isEmpty()) {
+            println "[SUCCESS] All required properties are present:"
+            required.each { prop ->
+                println "    ${prop} = ${buildProps.getProperty(prop)}"
+            }
+        } else {
+            println "[ERROR] Missing required properties:"
+            missing.each { prop ->
+                println "    - ${prop}"
+            }
+            throw new GradleException("build.properties validation failed")
+        }
+    }
+}
+
+// Task: Check modules-untouched integration
+tasks.register('checkModulesUntouched') {
+    group = 'verification'
+    description = 'Check modules-untouched repository integration and available versions'
+
+    doLast {
+        println ""
+        println "=".multiply(70)
+        println "Modules-Untouched Integration Check"
+        println "=".multiply(70)
+        println ""
+
+        def propsUrl = "https://raw.githubusercontent.com/Bearsampp/modules-untouched/main/modules/memcached.properties"
+        println "Repository URL:"
+        println "  ${propsUrl}"
+        println ""
+
+        println "Fetching memcached.properties from modules-untouched..."
+        def untouchedProps = fetchModulesUntouchedProperties()
+
+        if (untouchedProps) {
+            println ""
+            println "=".multiply(70)
+            println "Available Versions in modules-untouched"
+            println "=".multiply(70)
+
+            def sortedVersions = untouchedProps.sort { a, b ->
+                // Simple version comparison
+                def aParts = a.key.tokenize('.')
+                def bParts = b.key.tokenize('.')
+                for (int i = 0; i < Math.min(aParts.size(), bParts.size()); i++) {
+                    def aNum = aParts[i].toInteger()
+                    def bNum = bParts[i].toInteger()
+                    if (aNum != bNum) return aNum <=> bNum
+                }
+                return aParts.size() <=> bParts.size()
+            }
+
+            sortedVersions.each { version, url ->
+                println "  ${version.padRight(10)}"
+            }
+
+            println "=".multiply(70)
+            println "Total versions: ${untouchedProps.size()}"
+            println ""
+
+            println ""
+            println "=".multiply(70)
+            println "[SUCCESS] modules-untouched integration is working"
+            println "=".multiply(70)
+            println ""
+            println "Version Resolution Strategy:"
+            println "  1. Check modules-untouched memcached.properties (remote)"
+            println "  2. Construct standard URL format (fallback)"
+            println ""
+
+        } else {
+            println ""
+            println "=".multiply(70)
+            println "[WARNING] Could not fetch memcached.properties from modules-untouched"
+            println "=".multiply(70)
+            println ""
+            println "This may be due to:"
+            println "  - Network connectivity issues"
+            println "  - Repository access problems"
+            println "  - File not available at expected location"
+            println ""
+            println "The build system will fall back to:"
+            println "  1. Standard URL format construction"
+        }
+    }
+}
+
+// ============================================================================
+// BUILD LIFECYCLE HOOKS
+// ============================================================================
+
+gradle.taskGraph.whenReady { graph ->
+    println """
+    ================================================================
+      Bearsampp Module Memcached - Gradle Build
+    ================================================================
+    """.stripIndent()
+}
+
+// ============================================================================
+// DEFAULT TASK
+// ============================================================================
+
+defaultTasks 'info'
