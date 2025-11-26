@@ -12,6 +12,11 @@ Complete index of all Gradle build documentation for Bearsampp Module Memcached.
 | **Task Reference**    | All available Gradle tasks                       | [TASKS.md](TASKS.md)          |
 | **Configuration**     | Configuration files and properties               | [CONFIGURATION.md](CONFIGURATION.md) |
 | **Migration Guide**   | Ant to Gradle migration guide                    | [MIGRATION.md](MIGRATION.md)  |
+| **Build System**      | Build system specification                       | [BUILD-SYSTEM.md](BUILD-SYSTEM.md) |
+| **Design Decisions**  | Architecture and design decisions                | [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) |
+| **Migration Summary** | Complete migration summary                       | [MIGRATION-SUMMARY.md](MIGRATION-SUMMARY.md) |
+| **Docs Update**       | Documentation update summary                     | [DOCS-UPDATE-SUMMARY.md](DOCS-UPDATE-SUMMARY.md) |
+| **Final Summary**     | Final project summary                            | [FINAL-SUMMARY.md](FINAL-SUMMARY.md) |
 
 ---
 
@@ -19,11 +24,17 @@ Complete index of all Gradle build documentation for Bearsampp Module Memcached.
 
 ```
 .gradle-docs/
-├── INDEX.md              # This file - Documentation index
-├── README.md             # Main documentation and quick start
-├── TASKS.md              # Complete task reference
-├── CONFIGURATION.md      # Configuration guide
-└── MIGRATION.md          # Ant to Gradle migration guide
+├── INDEX.md                      # This file - Documentation index
+├── README.md                     # Main documentation and quick start
+├── TASKS.md                      # Complete task reference
+├── CONFIGURATION.md              # Configuration guide
+├── MIGRATION.md                  # Ant to Gradle migration guide
+├── BUILD-SYSTEM.md               # Build system specification
+├── DESIGN-DECISIONS.md           # Architecture and design decisions
+├── MIGRATION-SUMMARY.md          # Complete migration summary
+├── DOCS-UPDATE-SUMMARY.md        # Documentation update summary
+├── FINAL-SUMMARY.md              # Final project summary
+└── build.gradle.bruno-reference  # Reference build file
 ```
 
 ---
@@ -337,4 +348,4 @@ For documentation issues or questions:
 
 **Last Updated**: 2025-08-20  
 **Version**: 2025.8.20  
-**Total Documents**: 5
+**Total Documents**: 10
