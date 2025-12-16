@@ -126,8 +126,6 @@ gradle release -PbundleVersion=1.6.29
 | Task                      | Description                                  | Example                                      |
 |---------------------------|----------------------------------------------|----------------------------------------------|
 | `verify`                  | Verify build environment and dependencies    | `gradle verify`                              |
-| `validateProperties`      | Validate build.properties configuration      | `gradle validateProperties`                  |
-| `checkModulesUntouched`   | Check modules-untouched integration          | `gradle checkModulesUntouched`               |
 
 ### Information Tasks
 
@@ -135,7 +133,6 @@ gradle release -PbundleVersion=1.6.29
 |---------------------|--------------------------------------------------|----------------------------|
 | `info`              | Display build configuration information          | `gradle info`              |
 | `listVersions`      | List available bundle versions in bin/           | `gradle listVersions`      |
-| `listReleases`      | List all available releases from modules-untouched | `gradle listReleases`  |
 
 ### Task Groups
 
@@ -294,63 +291,61 @@ bearsampp-build/bins/memcached/2025.8.20/
 └── bearsampp-memcached-1.6.29-2025.8.20.7z.sha512
 ```
 
-### Modules-Untouched Integration
+### Version Management
 
-The build system **automatically downloads and extracts** Memcached versions from the [modules-untouched repository](https://github.com/Bearsampp/modules-untouched), similar to how the legacy Ant build worked:
+The build system uses a **two-source approach** for building releases:
 
-- **Repository**: `https://github.com/Bearsampp/modules-untouched`
-- **Properties File**: `modules/memcached.properties`
-- **Purpose**: Centralized version management and automatic downloads
+1. **Binaries**: Downloaded automatically from [modules-untouched](https://github.com/Bearsampp/modules-untouched)
+2. **Configuration**: Stored locally in `bin/` directory
 
 #### How It Works
 
-When you run `gradle release -PbundleVersion=1.6.29`, the build:
+When you run `gradle release -PbundleVersion=1.6.39`, the build:
 
-1. **Fetches** the `memcached.properties` file from modules-untouched
-2. **Looks up** the download URL for version 1.6.29
-3. **Downloads** the archive (cached in `bearsampp-build/tmp/bundles_src/`)
-4. **Extracts** the archive automatically
-5. **Validates** that memcached.exe exists
-6. **Builds** the release package
+1. **Downloads** Memcached binaries from modules-untouched (cached for reuse)
+2. **Extracts** the binaries to a temporary location
+3. **Locates** configuration files in `bin/memcached1.6.39/` or `bin/archived/memcached1.6.39/`
+4. **Combines** binaries + configuration files
+5. **Packages** the release archive
+6. **Generates** hash files (MD5, SHA1, SHA256, SHA512)
 
-#### Download Caching
+#### Directory Structure
 
-Downloaded archives are cached in `bearsampp-build/tmp/bundles_src/memcached/`:
-- First build: Downloads from modules-untouched
-- Subsequent builds: Reuses cached download
-- Saves bandwidth and speeds up builds
+```
+bin/
+├── memcached1.6.29/       # Configuration only
+│   └── bearsampp.conf
+├── memcached1.6.39/       # Configuration only
+│   └── bearsampp.conf
+└── archived/              # Older version configs
+    └── memcached1.5.22/
+        └── bearsampp.conf
 
-#### Supported Archive Formats
-
-The build automatically handles:
-- `.7z` - 7-Zip archives
-- `.zip` - ZIP archives  
-- `.tar.gz` - Gzipped tar archives
-
-#### No Local bin/ Directory Required
-
-Unlike the old workflow, you **don't need** to manually download and place files in `bin/`:
-- The build downloads directly from modules-untouched
-- Archives are extracted automatically
-- Nested directory structures (like `memcached-x86/`) are handled
+bearsampp-build/tmp/bundles_src/memcached/  # Downloaded binaries (cached)
+├── memcached-1.6.39-win64.7z
+└── memcached1.6.39/
+    ├── memcached.exe      # From modules-untouched
+    ├── memcached-debug.exe
+    └── ...
+```
 
 #### Verification Tasks
 
 | Task                      | Description                                  |
 |---------------------------|----------------------------------------------|
-| `listReleases`            | List all versions available in modules-untouched |
-| `checkModulesUntouched`   | Verify connection and list available versions |
+| `listVersions`            | List all versions available in bin/ and bin/archived/ |
+| `checkModulesUntouched`   | Check modules-untouched integration and available versions |
 
 Example:
 ```bash
-# See what versions are available
-gradle listReleases
+# See what configuration versions are available locally
+gradle listVersions
 
-# Verify modules-untouched integration
+# Check what binaries are available in modules-untouched
 gradle checkModulesUntouched
 
-# Build any available version
-gradle release -PbundleVersion=1.6.38
+# Build a specific version (downloads binaries automatically)
+gradle release -PbundleVersion=1.6.39
 ```
 
 ---

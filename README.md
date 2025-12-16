@@ -7,14 +7,16 @@ This is a module of [Bearsampp project](https://github.com/bearsampp/bearsampp) 
 
 ## Build System
 
-This project uses **Gradle** as its build system. The legacy Ant build has been fully replaced with a modern, pure Gradle implementation.
+This project uses **Gradle** as its build system for building and packaging Memcached module releases.
 
 ### Key Features
 
-- **Automatic Downloads**: Fetches Memcached versions from [modules-untouched](https://github.com/Bearsampp/modules-untouched)
+- **Automatic Downloads**: Fetches Memcached binaries from [modules-untouched](https://github.com/Bearsampp/modules-untouched)
+- **Local Configuration**: Bearsampp-specific configuration files stored in `bin/` directory
 - **Smart Caching**: Downloads are cached to speed up subsequent builds
-- **Multiple Formats**: Supports .7z, .zip, and .tar.gz archives
+- **Multiple Formats**: Supports .7z and .zip archive formats
 - **Hash Generation**: Automatically creates MD5, SHA1, SHA256, and SHA512 checksums
+- **Batch Processing**: Build all versions at once with `releaseAll`
 
 ### Quick Start
 
@@ -22,28 +24,31 @@ This project uses **Gradle** as its build system. The legacy Ant build has been 
 # Display build information
 gradle info
 
-# List available versions from modules-untouched
-gradle listReleases
+# List available versions in bin/
+gradle listVersions
 
-# Build a release (downloads automatically from modules-untouched)
-gradle release -PbundleVersion=1.6.29
+# Build a specific release
+gradle release -PbundleVersion=1.6.39
 
 # Build all versions
 gradle releaseAll
 
 # Clean build artifacts
 gradle clean
-```
 
-**Note**: The build automatically downloads and extracts Memcached versions from the modules-untouched repository. You don't need to manually download or place files in the `bin/` directory.
+# Verify build environment
+gradle verify
+```
 
 ### Prerequisites
 
 | Requirement       | Version       | Purpose                                  |
 |-------------------|---------------|------------------------------------------|
 | **Java**          | 8+            | Required for Gradle execution            |
-| **Gradle**        | 8.0+          | Build automation tool                    |
+| **Gradle**        | 8.0+          | Build automation tool (install locally)  |
 | **7-Zip**         | Latest        | Archive creation (.7z format)            |
+
+**Note**: This project does not use Gradle wrapper. Install Gradle 8.0+ locally and run commands with `gradle`.
 
 ### Available Tasks
 
@@ -55,9 +60,6 @@ gradle clean
 | `verify`              | Verify build environment and dependencies        |
 | `info`                | Display build configuration information          |
 | `listVersions`        | List available bundle versions in bin/           |
-| `listReleases`        | List available releases from modules-untouched   |
-| `validateProperties`  | Validate build.properties configuration          |
-| `checkModulesUntouched` | Check modules-untouched integration            |
 
 For complete documentation, see [.gradle-docs/README.md](.gradle-docs/README.md)
 
