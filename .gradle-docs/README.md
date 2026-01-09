@@ -18,6 +18,7 @@
 The Bearsampp Module Memcached project has been converted to a **pure Gradle build system**, replacing the legacy Ant build configuration. This provides:
 
 - **Modern Build System**     - Native Gradle tasks and conventions
+- **Automated Workflow**       - Automatic upstream release creation
 - **Better Performance**       - Incremental builds and caching
 - **Simplified Maintenance**   - Pure Groovy/Gradle DSL
 - **Enhanced Tooling**         - IDE integration and dependency management
@@ -291,6 +292,106 @@ bearsampp-build/bins/memcached/2025.8.20/
 └── bearsampp-memcached-1.6.29-2025.8.20.7z.sha512
 ```
 
+### Automated Upstream Workflow
+
+The build system includes an **intelligent automated workflow** that handles upstream releases:
+
+#### Smart Version Detection
+
+When you run `gradle release -PbundleVersion=1.6.39`, the build automatically:
+
+1. **Checks modules-untouched** - Does version 1.6.39 exist?
+   - ✅ **YES** → Skip to step 6 (normal build process)
+   - ❌ **NO** → Continue to step 2 (create upstream release)
+
+2. **Downloads from nono303** - Clones nono303/memcached repository and extracts `libevent-2.1/x64` folder
+
+3. **Extracts version** - Uses PowerShell to get version from `memcached.exe` file properties
+
+4. **Creates 7z archive** - Creates `memcached-{version}-win64.7z` with all binaries
+
+5. **Creates GitHub release**:
+   - Tag: `memcached-{bundle.release}` (e.g., `memcached-2025.8.20`)
+   - Title: `Memcache {VERSION}` (e.g., `Memcache 1.6.39`)
+   - Description: `Memcached {VERSION} automated build`
+   - Asset: The 7z file
+   - Uses GitHub CLI (`gh`) with `GH_PAT` environment variable
+
+6. **Waits for update** - Polls modules-untouched every 10 seconds (max 5 minutes) until version appears
+
+7. **Normal build process**:
+   - Downloads binaries from modules-untouched
+   - Overlays configuration from `bin/memcached{version}/`
+   - Packages final release
+   - Generates hash files
+
+#### Prerequisites for Upstream Workflow
+
+| Requirement       | Purpose                                          |
+|-------------------|--------------------------------------------------|
+| **GitHub CLI**    | Creating releases (`gh release create`)          |
+| **GH_PAT**        | GitHub Personal Access Token (environment var)   |
+| **7-Zip**         | Creating 7z archives                             |
+
+Set up GitHub authentication:
+```bash
+# Set environment variable
+$env:GH_PAT = 'your_github_personal_access_token'
+
+# Or authenticate with gh CLI
+gh auth login
+```
+
+#### Example Workflow
+
+```bash
+# Build a new version that doesn't exist in modules-untouched yet
+gradle release -PbundleVersion=1.6.40
+
+# Output:
+# ======================================================================
+# Building memcached 1.6.40
+# ======================================================================
+#
+# Checking modules-untouched for version 1.6.40...
+# ⚠ Version 1.6.40 not found in modules-untouched
+# Starting upstream release process...
+#
+# ======================================================================
+# Downloading Memcached 1.6.40 from nono303/memcached
+# ======================================================================
+# Repository: https://github.com/nono303/memcached
+# Branch: master
+# Subfolder: libevent-2.1/x64
+# ...
+# Successfully copied 15 files
+#
+# ======================================================================
+# Creating Upstream Release
+# ======================================================================
+# Memcached version: 1.6.40
+# Creating archive: memcached-1.6.40-win64.7z
+# ...
+# Creating GitHub release:
+#   Tag: memcached-2025.8.20
+#   Title: Memcache 1.6.40
+#   Asset: memcached-1.6.40-win64.7z
+# GitHub release created successfully!
+#
+# ======================================================================
+# Waiting for modules-untouched to be updated...
+# ======================================================================
+# [1] Checking modules-untouched (0s elapsed)...
+#   Not yet available, waiting 10s...
+# [2] Checking modules-untouched (10s elapsed)...
+# ✓ Version 1.6.40 found in modules-untouched!
+#
+# ======================================================================
+# Continuing with normal release process
+# ======================================================================
+# ...
+```
+
 ### Version Management
 
 The build system uses a **two-source approach** for building releases:
@@ -302,12 +403,13 @@ The build system uses a **two-source approach** for building releases:
 
 When you run `gradle release -PbundleVersion=1.6.39`, the build:
 
-1. **Downloads** Memcached binaries from modules-untouched (cached for reuse)
-2. **Extracts** the binaries to a temporary location
-3. **Locates** configuration files in `bin/memcached1.6.39/` or `bin/archived/memcached1.6.39/`
-4. **Combines** binaries + configuration files
-5. **Packages** the release archive
-6. **Generates** hash files (MD5, SHA1, SHA256, SHA512)
+1. **Checks** if version exists in modules-untouched (if not, creates upstream release automatically)
+2. **Downloads** Memcached binaries from modules-untouched (cached for reuse)
+3. **Extracts** the binaries to a temporary location
+4. **Locates** configuration files in `bin/memcached1.6.39/` or `bin/archived/memcached1.6.39/`
+5. **Combines** binaries + configuration files
+6. **Packages** the release archive
+7. **Generates** hash files (MD5, SHA1, SHA256, SHA512)
 
 #### Directory Structure
 

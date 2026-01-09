@@ -11,6 +11,8 @@ This project uses **Gradle** as its build system for building and packaging Memc
 
 ### Key Features
 
+- **Automated Upstream Workflow**: Automatically creates upstream releases if version doesn't exist
+- **Smart Version Detection**: Checks modules-untouched and creates releases as needed
 - **Automatic Downloads**: Fetches Memcached binaries from [modules-untouched](https://github.com/Bearsampp/modules-untouched)
 - **Local Configuration**: Bearsampp-specific configuration files stored in `bin/` directory
 - **Smart Caching**: Downloads are cached to speed up subsequent builds
