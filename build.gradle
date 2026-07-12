@@ -4,14 +4,15 @@
  * This is a modern Gradle build configuration for the Memcached module.
  *
  * VERSION RESOLUTION STRATEGY:
- *   - Binaries are downloaded from modules-untouched repository
- *   - Configuration files (bearsampp.conf) are stored locally in bin/
- *   - Build combines binaries + configuration into release packages
+ *   - Checks if version exists in modules-untouched
+ *   - If not, downloads binaries from nono303/memcached, creates release
+ *   - Waits for modules-untouched to be updated by GitHub Action
+ *   - Then downloads from modules-untouched and builds final packages
  *
  * Usage:
  *   gradle tasks                              - List all available tasks
- *   gradle release -PbundleVersion=1.6.39     - Build release for specific version
- *   gradle releaseAll                         - Build releases for all available versions
+ *   gradle release -PbundleVersion=1.6.39     - Build release (auto-handles upstream)
+ *   gradle releaseAll                         - Build all available versions
  *   gradle clean                              - Clean build artifacts
  *   gradle info                               - Display build information
  *   gradle verify                             - Verify build environment
@@ -61,6 +62,7 @@ ext {
     bundleTmpBuildPath = file("${buildTmpPath}/bundles_build/${bundleType}/${bundleName}").absolutePath
     bundleTmpPrepPath = file("${buildTmpPath}/bundles_prep/${bundleType}/${bundleName}").absolutePath
     bundleTmpSrcPath = file("${buildTmpPath}/bundles_src").absolutePath
+    bundleTmpUpstreamPath = file("${buildTmpPath}/upstream/${bundleName}").absolutePath
 }
 
 // Configure repositories
@@ -74,12 +76,15 @@ repositories {
 
 // Helper function to fetch modules-untouched properties
 def fetchModulesUntouchedProperties() {
-    // Use GitHub API to get the file content (no CDN caching)
-    def apiUrl = "https://api.github.com/repos/Bearsampp/modules-untouched/contents/modules/memcached.properties?ref=main"
+    // Add timestamp to bypass CDN cache
+    def timestamp = System.currentTimeMillis()
+    def propsUrl = "https://raw.githubusercontent.com/Bearsampp/modules-untouched/main/modules/memcached.properties?t=${timestamp}"
     try {
-        def connection = new URL(apiUrl).openConnection()
+        def connection = new URL(propsUrl).openConnection()
         connection.setRequestProperty("User-Agent", "Bearsampp-Build")
-        connection.setRequestProperty("Accept", "application/vnd.github.v3.raw")
+        connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+        connection.setRequestProperty("Pragma", "no-cache")
+        connection.setRequestProperty("Expires", "0")
         connection.setConnectTimeout(5000)
         connection.setReadTimeout(5000)
 
@@ -94,150 +99,192 @@ def fetchModulesUntouchedProperties() {
     }
 }
 
-// Helper function to create upstream release in modules-untouched
-def createUpstreamRelease(String version) {
+// Helper function to check if version exists in modules-untouched
+def versionExistsInModulesUntouched(String version) {
+    def props = fetchModulesUntouchedProperties()
+    return props != null && props.getProperty(version) != null
+}
+
+// Helper function to download memcached binaries from nono303
+def downloadMemcachedFromNono303(String version) {
     println ""
-    println "=".multiply(70)
-    println "Version ${version} not found in modules-untouched"
-    println "Starting upstream release process..."
-    println "=".multiply(70)
-    println ""
-
-    // Check prerequisites
-    def ghPath = findGitHubCLI()
-    if (!ghPath) {
-        throw new GradleException("""
-            GitHub CLI (gh) not found!
-            
-            Please install GitHub CLI to create upstream releases:
-              https://cli.github.com/
-            
-            Or set GH_PATH environment variable to gh.exe location.
-            
-            Alternatively, manually create the release in modules-untouched repository.
-        """.stripIndent())
-    }
-
-    def sevenZipExe = find7ZipExecutable()
-    if (!sevenZipExe) {
-        throw new GradleException("7-Zip executable not found! Please install 7-Zip.")
-    }
-
-    // Create temporary directory for upstream build
-    def upstreamTmpPath = file("${bundleTmpSrcPath}/upstream-${version}")
-    if (upstreamTmpPath.exists()) {
-        delete upstreamTmpPath
-    }
-    upstreamTmpPath.mkdirs()
-
     println "=".multiply(70)
     println "Downloading Memcached ${version} from nono303/memcached"
     println "=".multiply(70)
-    println "Repository: https://github.com/nono303/memcached"
-    println "Branch: master"
-    println "Subfolder: libevent-2.1/x64"
     println ""
 
-    // Clone nono303/memcached repository (sparse checkout for libevent-2.1/x64 only)
-    def cloneDir = file("${upstreamTmpPath}/nono303-memcached")
-    
-    try {
-        // Initialize git repo with sparse checkout
-        def initCmd = ['git', 'init', cloneDir.absolutePath]
-        def initProcess = new ProcessBuilder(initCmd as String[])
-            .redirectErrorStream(true)
-            .start()
-        initProcess.waitFor()
+    // Create upstream directory
+    def upstreamDir = file(bundleTmpUpstreamPath)
+    upstreamDir.mkdirs()
 
-        // Configure sparse checkout
-        def sparseCmd = ['git', '-C', cloneDir.absolutePath, 'config', 'core.sparseCheckout', 'true']
-        def sparseProcess = new ProcessBuilder(sparseCmd as String[])
-            .redirectErrorStream(true)
-            .start()
-        sparseProcess.waitFor()
+    // Repository details (matching the batch file)
+    def repoUrl = "https://github.com/nono303/memcached"
+    def branch = "master"
+    def subfolder = "libevent-2.1/x64"
 
-        // Set sparse checkout path
-        def sparseFile = file("${cloneDir}/.git/info/sparse-checkout")
-        sparseFile.parentFile.mkdirs()
-        sparseFile.text = "libevent-2.1/x64/*\n"
+    println "Repository: ${repoUrl}"
+    println "Branch: ${branch}"
+    println "Subfolder: ${subfolder}"
+    println "Version: ${version}"
+    println ""
 
-        // Add remote
-        def remoteCmd = ['git', '-C', cloneDir.absolutePath, 'remote', 'add', 'origin', 'https://github.com/nono303/memcached.git']
-        def remoteProcess = new ProcessBuilder(remoteCmd as String[])
-            .redirectErrorStream(true)
-            .start()
-        remoteProcess.waitFor()
+    // Download repository as ZIP archive
+    def repoZipUrl = "${repoUrl}/archive/refs/heads/${branch}.zip"
+    def repoZipFile = file("${upstreamDir}/memcached-repo.zip")
 
-        // Pull the specific folder
-        println "Downloading files from nono303/memcached..."
-        def pullCmd = ['git', '-C', cloneDir.absolutePath, 'pull', 'origin', 'master']
-        def pullProcess = new ProcessBuilder(pullCmd as String[])
-            .redirectErrorStream(true)
-            .start()
-        
-        pullProcess.inputStream.eachLine { line ->
-            println "  ${line}"
+    if (!repoZipFile.exists()) {
+        println "Downloading repository archive..."
+        println "URL: ${repoZipUrl}"
+        try {
+            def connection = new URL(repoZipUrl).openConnection()
+            connection.setRequestProperty("User-Agent", "Bearsampp-Build")
+            repoZipFile.withOutputStream { out ->
+                connection.inputStream.withCloseable { inp ->
+                    out << inp
+                }
+            }
+            println "Download complete: ${repoZipFile}"
+        } catch (Exception e) {
+            throw new GradleException("Failed to download repository: ${e.message}\n\nURL: ${repoZipUrl}")
         }
-        
-        def exitCode = pullProcess.waitFor()
-        if (exitCode != 0) {
-            throw new GradleException("Git pull failed with exit code: ${exitCode}")
-        }
-
-    } catch (Exception e) {
-        throw new GradleException("Failed to download from nono303/memcached: ${e.message}")
+    } else {
+        println "Using cached repository: ${repoZipFile}"
     }
 
-    // Copy files from libevent-2.1/x64 to build directory
-    def sourceDir = file("${cloneDir}/libevent-2.1/x64")
-    def buildDir = file("${upstreamTmpPath}/memcached-${version}-win64")
-    
+    // Extract the repository ZIP
+    def repoExtractDir = file("${upstreamDir}/repo-extract")
+    if (repoExtractDir.exists()) {
+        delete repoExtractDir
+    }
+    repoExtractDir.mkdirs()
+
+    println "Extracting repository archive..."
+    copy {
+        from zipTree(repoZipFile)
+        into repoExtractDir
+    }
+
+    // Find the extracted folder (will be named like "memcached-master")
+    def extractedRepoDir = repoExtractDir.listFiles()?.find { it.isDirectory() && it.name.startsWith('memcached-') }
+    if (!extractedRepoDir) {
+        throw new GradleException("Could not find extracted repository folder in ${repoExtractDir}")
+    }
+
+    println "Found repository folder: ${extractedRepoDir.name}"
+
+    // Locate the subfolder with the binaries
+    def sourceDir = file("${extractedRepoDir}/${subfolder}")
     if (!sourceDir.exists()) {
-        throw new GradleException("Source directory not found: ${sourceDir}")
+        throw new GradleException("Subfolder '${subfolder}' not found in repository at ${sourceDir}")
     }
 
-    println ""
-    println "Copying files from libevent-2.1/x64..."
+    println "Found binaries folder: ${sourceDir}"
+
+    // Copy files to output directory
+    def outputDir = file("${upstreamDir}/memcached-${version}-files")
+    if (outputDir.exists()) {
+        delete outputDir
+    }
+    outputDir.mkdirs()
+
+    println "Copying files from ${subfolder}..."
     copy {
         from sourceDir
-        into buildDir
-        exclude '.git', '.gitignore'
+        into outputDir
+        include '**/*'
     }
 
-    def fileCount = buildDir.listFiles()?.size() ?: 0
-    println "Successfully copied ${fileCount} files"
+    // Count files
+    def fileCount = 0
+    outputDir.eachFileRecurse { fileCount++ }
+    println "Successfully copied ${fileCount} files to ${outputDir}"
 
-    // Extract version from memcached.exe
-    def memcachedExe = file("${buildDir}/memcached.exe")
+    // Verify memcached.exe exists
+    def memcachedExe = file("${outputDir}/memcached.exe")
     if (!memcachedExe.exists()) {
-        throw new GradleException("memcached.exe not found in downloaded files")
+        throw new GradleException("memcached.exe not found in downloaded files at ${outputDir}")
     }
 
+    println "Verified memcached.exe exists"
+    println ""
+
+    return outputDir
+}
+
+// Helper function to get memcached.exe version
+def getMemcachedVersion(File memcachedExe) {
+    if (!memcachedExe.exists()) {
+        throw new GradleException("memcached.exe not found: ${memcachedExe}")
+    }
+
+    try {
+        // Use PowerShell to get file version
+        def command = [
+            'powershell',
+            '-NoProfile',
+            '-Command',
+            "(Get-Item '${memcachedExe.absolutePath}').VersionInfo.FileVersion"
+        ]
+
+        def process = new ProcessBuilder(command as String[])
+            .redirectErrorStream(true)
+            .start()
+
+        def output = process.inputStream.text.trim()
+        def exitCode = process.waitFor()
+
+        if (exitCode != 0 || !output) {
+            throw new GradleException("Failed to get version from memcached.exe")
+        }
+
+        return output
+    } catch (Exception e) {
+        throw new GradleException("Failed to extract version from memcached.exe: ${e.message}")
+    }
+}
+
+// Helper function to create upstream release
+def createUpstreamRelease(String version, File binariesDir) {
     println ""
     println "=".multiply(70)
     println "Creating Upstream Release"
     println "=".multiply(70)
-    println "Memcached version: ${version}"
+    println ""
 
-    // Create 7z archive with correct naming convention
-    // Format: memcached-{version}.7z (files at root, not in subdirectory)
-    def archiveName = "memcached-${version}.7z"
-    def archiveFile = file("${upstreamTmpPath}/${archiveName}")
-    
+    // Get memcached version from exe
+    def memcachedExe = file("${binariesDir}/memcached.exe")
+    def memcachedVersion = getMemcachedVersion(memcachedExe)
+    println "Memcached version: ${memcachedVersion}"
+
+    // Create 7z archive
+    def upstreamDir = file(bundleTmpUpstreamPath)
+    def archiveName = "memcached-${version}-win64.7z"
+    def archiveFile = file("${upstreamDir}/${archiveName}")
+
+    if (archiveFile.exists()) {
+        delete archiveFile
+    }
+
     println "Creating archive: ${archiveName}"
-    
-    // Archive the contents of the directory (not the directory itself)
+
+    // Find 7z executable
+    def sevenZipExe = find7ZipExecutable()
+    if (!sevenZipExe) {
+        throw new GradleException("7-Zip not found. Required for creating upstream release.")
+    }
+
+    // Create 7z archive from binaries directory
     def command = [
         sevenZipExe,
         'a',
         '-t7z',
         '-mx9',
-        archiveFile.absolutePath,
+        archiveFile.absolutePath.toString(),
         '.'
     ]
 
     def process = new ProcessBuilder(command as String[])
-        .directory(buildDir)  // Run from inside the directory to archive contents
+        .directory(binariesDir)
         .redirectErrorStream(true)
         .start()
 
@@ -251,238 +298,99 @@ def createUpstreamRelease(String version) {
     }
 
     println "Archive created: ${archiveFile}"
-
-    // Create GitHub release
     println ""
-    println "Creating GitHub release:"
-    
-    // Generate tag in format: memcached-YYYY.MM.DD
-    def today = new Date()
-    def tagDateFormat = new java.text.SimpleDateFormat('yyyy.MM.dd')
-    def releaseTag = "memcached-${tagDateFormat.format(today)}"
-    def releaseTitle = "Memcache ${version}"
-    def releaseBody = "Memcached ${version} automated build"
-    
+
+    // Create GitHub release in modules-untouched repository
+    def ghToken = System.getenv('GH_PAT')
+    if (!ghToken) {
+        throw new GradleException("GH_PAT environment variable not set. Required for creating GitHub releases.")
+    }
+
+    def releaseTag = "memcached-${bundleRelease}"  // e.g., "memcached-2025.8.20"
+    def releaseTitle = "Memcache ${memcachedVersion}"
+    def releaseBody = "Memcached ${memcachedVersion} automated build"
+
+    println "Creating GitHub release in modules-untouched:"
+    println "  Repository: Bearsampp/modules-untouched"
     println "  Tag: ${releaseTag}"
     println "  Title: ${releaseTitle}"
     println "  Asset: ${archiveName}"
     println ""
 
-    // Check for GH_PAT environment variable
-    def ghToken = System.getenv('GH_PAT')
-    if (!ghToken) {
-        throw new GradleException("""
-            GH_PAT environment variable not set!
-            
-            Please set your GitHub Personal Access Token:
-              Windows (PowerShell): \$env:GH_PAT = 'your_token_here'
-              Windows (CMD): set GH_PAT=your_token_here
-            
-            The token needs 'repo' scope to create releases.
-            Create one at: https://github.com/settings/tokens
-        """.stripIndent())
-    }
-
-    // Check if release already exists
-    def checkCmd = [
-        ghPath,
+    // Use GitHub CLI (gh) to create release in modules-untouched repository
+    def ghCommand = [
+        'gh',
         'release',
-        'view',
+        'create',
         releaseTag,
-        '--repo', 'Bearsampp/modules-untouched'
+        archiveFile.absolutePath,
+        '--repo', 'Bearsampp/modules-untouched',
+        '--title', releaseTitle,
+        '--notes', releaseBody
     ]
-    
-    def checkBuilder = new ProcessBuilder(checkCmd as String[])
+
+    def ghProcess = new ProcessBuilder(ghCommand as String[])
+        .directory(projectDir)
         .redirectErrorStream(true)
-    
-    // Set GH_TOKEN environment variable
-    checkBuilder.environment().put('GH_TOKEN', ghToken)
-    
-    def checkProcess = checkBuilder.start()
-    def releaseExists = checkProcess.waitFor() == 0
-    
-    if (releaseExists) {
-        println "Release ${releaseTag} already exists, deleting and recreating..."
-        
-        // Delete the existing release
-        def deleteCmd = [
-            ghPath,
-            'release',
-            'delete',
-            releaseTag,
-            '--repo', 'Bearsampp/modules-untouched',
-            '--yes'
-        ]
-        
-        def deleteBuilder = new ProcessBuilder(deleteCmd as String[])
-            .redirectErrorStream(true)
-        
-        // Set GH_TOKEN environment variable
-        deleteBuilder.environment().put('GH_TOKEN', ghToken)
-        
-        def deleteProcess = deleteBuilder.start()
-        
-        deleteProcess.inputStream.eachLine { line ->
-            println "  ${line}"
-        }
-        
-        exitCode = deleteProcess.waitFor()
-        if (exitCode != 0) {
-            println "Warning: Failed to delete existing release (exit code: ${exitCode})"
-        }
-        
-        // Wait a moment for GitHub to process the deletion
-        Thread.sleep(2000)
-        
-        // Now create the release fresh
-        def createCmd = [
-            ghPath,
-            'release',
-            'create',
-            releaseTag,
-            archiveFile.absolutePath,
-            '--repo', 'Bearsampp/modules-untouched',
-            '--title', releaseTitle,
-            '--notes', releaseBody,
-            '--latest'
-        ]
-        
-        def createBuilder = new ProcessBuilder(createCmd as String[])
-            .redirectErrorStream(true)
-        
-        // Set GH_TOKEN environment variable
-        createBuilder.environment().put('GH_TOKEN', ghToken)
-        
-        def createProcess = createBuilder.start()
-        
-        createProcess.inputStream.eachLine { line ->
-            println "  ${line}"
-        }
-        
-        exitCode = createProcess.waitFor()
-        if (exitCode != 0) {
-            throw new GradleException("GitHub release creation failed with exit code: ${exitCode}")
-        }
-        
-    } else {
-        // Create new release
-        def createCmd = [
-            ghPath,
-            'release',
-            'create',
-            releaseTag,
-            archiveFile.absolutePath,
-            '--repo', 'Bearsampp/modules-untouched',
-            '--title', releaseTitle,
-            '--notes', releaseBody,
-            '--latest'
-        ]
-        
-        def createBuilder = new ProcessBuilder(createCmd as String[])
-            .redirectErrorStream(true)
-        
-        // Set GH_TOKEN environment variable
-        createBuilder.environment().put('GH_TOKEN', ghToken)
-        
-        def createProcess = createBuilder.start()
-        
-        createProcess.inputStream.eachLine { line ->
-            println "  ${line}"
-        }
-        
-        exitCode = createProcess.waitFor()
-        if (exitCode != 0) {
-            throw new GradleException("GitHub release creation failed with exit code: ${exitCode}")
-        }
+        .start()
+
+    ghProcess.inputStream.eachLine { line ->
+        println "  ${line}"
     }
 
-    println "GitHub release created successfully!"
+    def ghExitCode = ghProcess.waitFor()
+    if (ghExitCode != 0) {
+        throw new GradleException("GitHub release creation failed with exit code: ${ghExitCode}")
+    }
 
-    // Wait for modules-untouched to be updated
+    println ""
+    println "GitHub release created successfully in modules-untouched!"
+    println "Release URL: https://github.com/Bearsampp/modules-untouched/releases/tag/${releaseTag}"
+    println ""
+    println "The GitHub Action will update memcached.properties with:"
+    println "  ${version} = https://github.com/Bearsampp/modules-untouched/releases/download/${releaseTag}/${archiveName}"
+    println ""
+}
+
+// Helper function to wait for modules-untouched to be updated
+def waitForModulesUntouchedUpdate(String version, int maxWaitMinutes = 5) {
     println ""
     println "=".multiply(70)
     println "Waiting for modules-untouched to be updated..."
     println "=".multiply(70)
-    
-    // Give the workflow time to start and complete
-    println "Waiting 30 seconds for workflow to complete..."
-    Thread.sleep(30000)
-    
-    def maxWaitTime = 300 // 5 minutes
-    def checkInterval = 15 // 15 seconds
-    def elapsed = 30 // Already waited 30 seconds
-    def found = false
-    
-    while (elapsed < maxWaitTime && !found) {
-        println "[${(elapsed / 15).intValue()}] Checking modules-untouched (${elapsed}s elapsed)..."
-        
-        def props = fetchModulesUntouchedProperties()
-        if (props && props.getProperty(version)) {
+    println ""
+
+    def maxWaitMs = maxWaitMinutes * 60 * 1000
+    def checkIntervalMs = 30 * 1000 // Check every 30 seconds
+    def startTime = System.currentTimeMillis()
+    def attempt = 0
+
+    while (System.currentTimeMillis() - startTime < maxWaitMs) {
+        attempt++
+        def elapsed = (System.currentTimeMillis() - startTime) / 1000
+        println "[${attempt}] Checking modules-untouched (${elapsed}s elapsed)..."
+
+        if (versionExistsInModulesUntouched(version)) {
+            println ""
             println "✓ Version ${version} found in modules-untouched!"
-            found = true
-        } else {
-            println "  Not yet available, waiting ${checkInterval}s..."
-            Thread.sleep(checkInterval * 1000)
-            elapsed += checkInterval
+            println ""
+            return true
         }
-    }
-    
-    if (!found) {
-        throw new GradleException("""
-            Timeout waiting for modules-untouched to be updated.
-            
-            The release was created successfully, but the properties file hasn't been updated yet.
-            Please wait a few minutes and try running the build again.
-        """.stripIndent())
+
+        println "  Not yet available, waiting ${checkIntervalMs / 1000}s..."
+        Thread.sleep(checkIntervalMs)
     }
 
-    println ""
-    println "=".multiply(70)
-    println "Continuing with normal release process"
-    println "=".multiply(70)
-    println ""
-}
+    throw new GradleException("""
+        Timeout waiting for modules-untouched to be updated.
 
-// Helper function to find GitHub CLI executable
-def findGitHubCLI() {
-    // Check environment variable
-    def ghPath = System.getenv('GH_PATH')
-    if (ghPath) {
-        def exe = file(ghPath)
-        if (exe.exists()) {
-            return exe.absolutePath
-        }
-    }
+        Version ${version} was not found after ${maxWaitMinutes} minutes.
 
-    // Try to find in PATH
-    try {
-        def process = ['where', 'gh.exe'].execute()
-        process.waitFor()
-        if (process.exitValue() == 0) {
-            def output = process.text.trim()
-            if (output) {
-                return output.split('\n')[0].trim()
-            }
-        }
-    } catch (Exception e) {
-        // Ignore
-    }
-
-    // Check common installation paths
-    def commonPaths = [
-        'C:/Program Files/GitHub CLI/gh.exe',
-        'C:/Program Files (x86)/GitHub CLI/gh.exe',
-        "${System.getProperty('user.home')}/AppData/Local/Programs/GitHub CLI/gh.exe"
-    ]
-
-    for (path in commonPaths) {
-        def exe = file(path)
-        if (exe.exists()) {
-            return exe.absolutePath
-        }
-    }
-
-    return null
+        Please check:
+        1. GitHub Action status: https://github.com/Bearsampp/modules-untouched/actions
+        2. The release was created: https://github.com/Bearsampp/module-memcached/releases
+        3. Try running the build again in a few minutes
+    """.stripIndent())
 }
 
 // Helper function to get module from modules-untouched (downloads and extracts binaries)
@@ -497,31 +405,10 @@ def getModuleUntouched(String version) {
         throw new GradleException("Could not fetch modules-untouched properties for version ${version}")
     }
 
-    // Debug: print all available versions
-    println "* Available versions in properties file:"
-    untouchedProps.each { key, value ->
-        println "  - ${key}"
-    }
-
     // Get the URL for this version
     def downloadUrl = untouchedProps.getProperty(version)
     if (!downloadUrl) {
-        // Version not found - try to create upstream release
-        println ""
-        println "⚠ Version ${version} not found in modules-untouched"
-        
-        createUpstreamRelease(version)
-        
-        // Fetch properties again after creating release
-        untouchedProps = fetchModulesUntouchedProperties()
-        if (!untouchedProps) {
-            throw new GradleException("Could not fetch modules-untouched properties after creating release")
-        }
-        
-        downloadUrl = untouchedProps.getProperty(version)
-        if (!downloadUrl) {
-            throw new GradleException("Version ${version} still not found in modules-untouched properties after creating release")
-        }
+        throw new GradleException("Version ${version} not found in modules-untouched properties")
     }
 
     println "* Url         : ${downloadUrl}"
@@ -779,6 +666,7 @@ tasks.register('info') {
           Tmp Prep:     ${bundleTmpPrepPath}
           Tmp Build:    ${bundleTmpBuildPath}
           Tmp Src:      ${bundleTmpSrcPath}
+          Tmp Upstream: ${bundleTmpUpstreamPath}
 
         Java:
           Version:      ${JavaVersion.current()}
@@ -791,7 +679,7 @@ tasks.register('info') {
         Quick Start:
           gradle tasks                              - List all available tasks
           gradle info                               - Show this information
-          gradle release -PbundleVersion=1.6.39     - Build release for version
+          gradle release -PbundleVersion=1.6.39     - Build release (auto-handles upstream)
           gradle releaseAll                         - Build all available versions
           gradle clean                              - Clean build artifacts
           gradle verify                             - Verify build environment
@@ -801,10 +689,10 @@ tasks.register('info') {
     }
 }
 
-// Task: Main release task - build release for specific version
+// Task: Main release task - build release for specific version (with upstream handling)
 tasks.register('release') {
     group = 'build'
-    description = 'Build release package for a specific version (use -PbundleVersion=X.X.X or run interactively)'
+    description = 'Build release package for a specific version (auto-handles upstream if needed)'
 
     doLast {
         def versionToBuild = project.findProperty('bundleVersion')
@@ -884,6 +772,35 @@ tasks.register('release') {
         println ""
         println "=".multiply(70)
         println "Building ${bundleName} ${versionToBuild}"
+        println "=".multiply(70)
+        println ""
+
+        // Check if version exists in modules-untouched
+        println "Checking modules-untouched for version ${versionToBuild}..."
+        def existsInUntouched = versionExistsInModulesUntouched(versionToBuild)
+
+        if (!existsInUntouched) {
+            println ""
+            println "⚠ Version ${versionToBuild} not found in modules-untouched"
+            println "Starting upstream release process..."
+            println ""
+
+            // Download binaries from nono303
+            def binariesDir = downloadMemcachedFromNono303(versionToBuild)
+
+            // Create upstream release (7z + GitHub release)
+            createUpstreamRelease(versionToBuild, binariesDir)
+
+            // Wait for modules-untouched to be updated
+            waitForModulesUntouchedUpdate(versionToBuild, 5)
+        } else {
+            println "✓ Version ${versionToBuild} found in modules-untouched"
+            println ""
+        }
+
+        // Now continue with normal release process
+        println "=".multiply(70)
+        println "Continuing with normal release process"
         println "=".multiply(70)
         println ""
 
