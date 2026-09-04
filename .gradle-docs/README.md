@@ -406,7 +406,7 @@ When you run `gradle release -PbundleVersion=1.6.39`, the build:
 1. **Checks** if version exists in modules-untouched (if not, creates upstream release automatically)
 2. **Downloads** Memcached binaries from modules-untouched (cached for reuse)
 3. **Extracts** the binaries to a temporary location
-4. **Locates** configuration files in `bin/memcached1.6.39/` or `bin/archived/memcached1.6.39/`
+4. **Locates** configuration files in `../bin/archived/memcached1.6.39/` or `bin/archived/memcached1.6.39/`
 5. **Combines** binaries + configuration files
 6. **Packages** the release archive
 7. **Generates** hash files (MD5, SHA1, SHA256, SHA512)
