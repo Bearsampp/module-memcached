@@ -19,7 +19,7 @@
   </defs>
   <rect class="bg" x="0" y="0" width="1000" height="360" rx="16" />
   <text class="title" x="64" y="34">Bearsampp/module-memcached release downloads</text>
-  <text class="sub" x="64" y="352">Generated 2026-10-31</text>
+  <text class="sub" x="64" y="352">Generated 2026-11-01</text>
   <line x1="64" y1="52.00" x2="976" y2="52.00" class="grid"/>
   <text x="56" y="56.00" text-anchor="end" class="axis">1,758</text>
   <line x1="64" y1="94.00" x2="976" y2="94.00" class="grid"/>
@@ -34,16 +34,16 @@
   <text x="56" y="266.00" text-anchor="end" class="axis">293</text>
   <line x1="64" y1="304.00" x2="976" y2="304.00" class="grid"/>
   <text x="56" y="308.00" text-anchor="end" class="axis">0</text>
-  <path d="M 64.00 304 L 64.00 117.80 L 103.65 117.65 L 143.30 117.51 L 182.96 117.08 L 222.61 116.79 L 262.26 114.93 L 301.91 113.78 L 341.57 112.63 L 381.22 112.49 L 420.87 111.92 L 460.52 111.06 L 500.17 111.06 L 539.83 111.06 L 579.48 98.59 L 619.13 98.44 L 658.78 98.44 L 698.43 98.01 L 738.09 97.73 L 777.74 83.39 L 817.39 73.93 L 857.04 73.65 L 896.70 61.46 L 936.35 61.17 L 976.00 52.00 L 976.00 304 Z" fill="url(#fill-total-trend-black)"/>
-  <polyline class="line" points="64.00,117.80 103.65,117.65 143.30,117.51 182.96,117.08 222.61,116.79 262.26,114.93 301.91,113.78 341.57,112.63 381.22,112.49 420.87,111.92 460.52,111.06 500.17,111.06 539.83,111.06 579.48,98.59 619.13,98.44 658.78,98.44 698.43,98.01 738.09,97.73 777.74,83.39 817.39,73.93 857.04,73.65 896.70,61.46 936.35,61.17 976.00,52.00"/>
+  <path d="M 64.00 304 L 64.00 117.80 L 102.00 117.65 L 140.00 117.51 L 178.00 117.08 L 216.00 116.79 L 254.00 114.93 L 292.00 113.78 L 330.00 112.63 L 368.00 112.49 L 406.00 111.92 L 444.00 111.06 L 482.00 111.06 L 520.00 111.06 L 558.00 98.59 L 596.00 98.44 L 634.00 98.44 L 672.00 98.01 L 710.00 97.73 L 748.00 83.39 L 786.00 73.93 L 824.00 73.65 L 862.00 61.46 L 900.00 61.17 L 938.00 52.00 L 976.00 52.00 L 976.00 304 Z" fill="url(#fill-total-trend-black)"/>
+  <polyline class="line" points="64.00,117.80 102.00,117.65 140.00,117.51 178.00,117.08 216.00,116.79 254.00,114.93 292.00,113.78 330.00,112.63 368.00,112.49 406.00,111.92 444.00,111.06 482.00,111.06 520.00,111.06 558.00,98.59 596.00,98.44 634.00,98.44 672.00,98.01 710.00,97.73 748.00,83.39 786.00,73.93 824.00,73.65 862.00,61.46 900.00,61.17 938.00,52.00 976.00,52.00"/>
   <circle class="dot" cx="976.00" cy="52.00" r="4.5"/>
   
   <text class="axis" x="64.00" y="336" text-anchor="start">2026-10-07</text>
-  <text class="axis" x="222.61" y="336" text-anchor="middle">2026-10-12</text>
-  <text class="axis" x="381.22" y="336" text-anchor="middle">2026-10-16</text>
-  <text class="axis" x="539.83" y="336" text-anchor="middle">2026-10-20</text>
-  <text class="axis" x="698.43" y="336" text-anchor="middle">2026-10-24</text>
-  <text class="axis" x="857.04" y="336" text-anchor="middle">2026-10-28</text>
-  <text class="axis" x="976.00" y="336" text-anchor="end">2026-10-31</text>
+  <text class="axis" x="216.00" y="336" text-anchor="middle">2026-10-12</text>
+  <text class="axis" x="368.00" y="336" text-anchor="middle">2026-10-16</text>
+  <text class="axis" x="520.00" y="336" text-anchor="middle">2026-10-20</text>
+  <text class="axis" x="672.00" y="336" text-anchor="middle">2026-10-24</text>
+  <text class="axis" x="824.00" y="336" text-anchor="middle">2026-10-28</text>
+  <text class="axis" x="976.00" y="336" text-anchor="end">2026-11-01</text>
   <text class="latest" x="976" y="34" text-anchor="end">Latest total: 1,758</text>
 </svg>
